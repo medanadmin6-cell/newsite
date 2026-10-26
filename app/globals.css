@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+/* Velora. Light page, blue brand, gold prices. */
+:root {
+  --bg: #f3f5f8;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #eef2f8;
+  --surface-3: #e7edf6;
+  --line: #e3e8f0;
+  --odds-btn: #f4f7fb;
+  --disabled: #c5ced6;
+
+  --accent: #2f6bff;
+  --accent-ink: #ffffff;
+  --accent-dim: #1d4ed8;
+  --focus: #2f6bff;
+  --accent-soft: #e7efff;
+  --price: #e8a317;
+
+  --text: #1c2430;
+  --text-muted: #6b7280;
+  --text-faint: #9aa3af;
+  --text-bright: #111827;
+
+  --win: #16a34a;
+  --win-2: #15803d;
+  --lose: #e11d48;
+  --lose-bg: #fff1f2;
+  --pending: #f5a524;
+  --live: #ff3b5c;
+  --hint: #0ea5e9;
+  --hint-bg: #e0f2fe;
+
+  --field: #ffffff;
+  --field-line: #e5e7eb;
+  --input: #ffffff;
+  --input-ink: #111827;
+  --input-placeholder: #9ca3af;
+
+  --radius: 8px;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-odds-btn: var(--odds-btn);
+  --color-disabled: var(--disabled);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-soft: var(--accent-soft);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-win: var(--win);
+  --color-lose: var(--lose);
+  --color-pending: var(--pending);
+  --color-live: var(--live);
+  --color-hint: var(--hint);
+  --color-field: var(--field);
+  --color-input: var(--input);
+}
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  /* Roboto is the face the reference build ships, with a metric-compatible
+     fallback stack so the layout does not shift before the webfont lands. */
+  font-family: var(--font-roboto), "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  overscroll-behavior-y: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Sportsbook rows are dense; the scrollbar is noise. */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* The operator console's tables, stacked into cards on a phone.
+ *
+ * Below this width a wide table can only be read by swiping sideways, and the
+ * action buttons sit in the last column where they are hardest to reach. Each
+ * row becomes a card instead, with every value labelled by its column heading.
+ * The headings arrive as --col-N on the table, set by the Table component, so
+ * a screen gets this without rewriting its rows. */
+@media (max-width: 767px) {
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* The header row is the label on each cell now. */
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table tr {
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    padding: 0.125rem 0;
+  }
+
+  .admin-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    text-align: right;
+  }
+
+  .admin-table td::before {
+    content: var(--label, "");
+    flex: 0 0 auto;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .admin-table td:nth-child(1) { --label: var(--col-1, ""); }
+  .admin-table td:nth-child(2) { --label: var(--col-2, ""); }
+  .admin-table td:nth-child(3) { --label: var(--col-3, ""); }
+  .admin-table td:nth-child(4) { --label: var(--col-4, ""); }
+  .admin-table td:nth-child(5) { --label: var(--col-5, ""); }
+  .admin-table td:nth-child(6) { --label: var(--col-6, ""); }
+  .admin-table td:nth-child(7) { --label: var(--col-7, ""); }
+  .admin-table td:nth-child(8) { --label: var(--col-8, ""); }
+  .admin-table td:nth-child(9) { --label: var(--col-9, ""); }
+  .admin-table td:nth-child(10) { --label: var(--col-10, ""); }
+
+  /* An empty-state row spanning the table is a message, not a labelled value. */
+  .admin-table td[colspan]::before {
+    display: none;
+  }
+  .admin-table td[colspan] {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.live-dot {
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+/* Price movement, the way a board shows it: a brief tint, not a jump. */
+@keyframes odds-rise {
+  0% { color: var(--win); }
+  100% { color: var(--text); }
+}
+@keyframes odds-fall {
+  0% { color: var(--lose); }
+  100% { color: var(--text); }
+}
+.odds-rise { animation: odds-rise 1.2s ease-out; }
+.odds-fall { animation: odds-fall 1.2s ease-out; }
+
+/* ---------------------------------------------------------------------------
+   The win celebration.
+
+   A win should land, not fade in. The cup is thrown up with a little overshoot
+   and then left breathing; the burst turns behind it; the sparkles are offset
+   so they never blink together. Everything below is decoration, so all of it
+   stops for a player who has asked for less motion.
+   ------------------------------------------------------------------------- */
+
+@keyframes cup-in {
+  0%   { transform: scale(0.55) translateY(30px); opacity: 0; }
+  55%  { transform: scale(1.08) translateY(-8px); opacity: 1; }
+  75%  { transform: scale(0.97) translateY(2px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.win-cup { animation: cup-in 0.72s cubic-bezier(0.22, 0.9, 0.3, 1.2) both; }
+
+@keyframes cup-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+.win-cup-float { animation: cup-float 3.4s ease-in-out 0.8s infinite; }
+
+@keyframes win-line-in {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.win-line { animation: win-line-in 0.5s ease-out both; }
+
+@keyframes confetti-fall {
+  0%   { transform: translate3d(0, -12vh, 0) rotate(0deg); opacity: 0; }
+  8%   { opacity: 1; }
+  100% { transform: translate3d(var(--drift, 0px), 104vh, 0) rotate(760deg); opacity: 0; }
+}
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .win-cup,
+  .win-cup-float,
+  .win-line,
+  .confetti-piece {
+    animation: none;
+  }
+  .confetti-piece { display: none; }
+}

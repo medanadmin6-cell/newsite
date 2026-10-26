@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3btafric withdrawal notification</title>
+    <link rel="stylesheet" href="/withdrawal-notification/withdrawal-notification.css" />
+    <script src="/withdrawal-notification/withdrawal-notification.js"></script>
+  </head>
+  <body style="margin:0;min-height:100vh;background:#08575E;color:#fff;font-family:sans-serif">
+    <div style="padding:28px">
+      <p style="margin:0 0 12px;font-size:14px">3btafric withdraw test</p>
+      <button id="run" type="button" style="font:600 16px sans-serif;padding:12px 16px">Show withdrawal notification</button>
+    </div>
+    <script>
+      document.getElementById("run").addEventListener("click", function () {
+        window.WithdrawalNotification.configure({
+          assetBase: "/withdrawal-notification/assets",
+          brandName: "www.22bex.com",
+        });
+        window.WithdrawalNotification.show({
+          amount: 250,
+          currentBalance: 40,
+          currency: "GHS",
+        });
+      });
+    </script>
+  </body>
+</html>

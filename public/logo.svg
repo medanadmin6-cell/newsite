@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" role="img" aria-label="Velora">
+  <rect x="0" y="4" width="36" height="36" rx="10" fill="#2f6bff"/>
+  <path fill="#fff" d="M8 12h6.4l3.6 11.2L21.6 12H28l-7.4 18h-4.2L8 12z"/>
+  <text x="46" y="31"
+        font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif"
+        font-size="22" font-weight="800" letter-spacing="-0.4" fill="#111827">Velora</text>
+</svg>

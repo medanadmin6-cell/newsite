@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 16" width="24" height="16" role="img" aria-label="South Africa">
+  <rect width="24" height="8" fill="#DE3831"/>
+  <rect y="8" width="24" height="8" fill="#002395"/>
+  <path d="M0 0l11 8L0 16z" fill="#fff"/>
+  <path d="M0 2.2L8 8 0 13.8z" fill="#007A4D"/>
+  <path d="M0 0v2.2L8 8 0 13.8V16l11-8z" fill="#fff"/>
+  <path d="M0 4.4L4.8 8 0 11.6z" fill="#FFB612"/>
+  <path d="M8 6.8h16v2.4H8z" fill="#fff"/>
+  <path d="M9.6 7.3H24v1.4H9.6z" fill="#007A4D"/>
+</svg>

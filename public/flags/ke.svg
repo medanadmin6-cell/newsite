@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 16" width="24" height="16" role="img" aria-label="Kenya">
+  <rect width="24" height="16" fill="#fff"/>
+  <rect width="24" height="4.6" fill="#000"/>
+  <rect y="5.4" width="24" height="5.2" fill="#BB0000"/>
+  <rect y="11.4" width="24" height="4.6" fill="#006600"/>
+  <g transform="translate(12 8)">
+    <ellipse rx="2.1" ry="5" fill="#BB0000" stroke="#fff" stroke-width=".7"/>
+    <path d="M-3.4-4.4L3.4 4.4M3.4-4.4L-3.4 4.4" stroke="#fff" stroke-width="1.1"/>
+    <ellipse rx="1.5" ry="4.2" fill="#BB0000"/>
+  </g>
+</svg>
