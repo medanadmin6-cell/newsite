@@ -350,3 +350,10 @@ end $$;
 -- the count does not count as this one.
 alter table users add column if not exists verification_topup boolean not null default false;
 
+-- ============ 0016_custom_match_owner.sql ============
+-- Which partner created a custom match. Null means the operator created it.
+alter table custom_matches
+  add column if not exists created_by uuid references sub_admins (id) on delete set null;
+
+create index if not exists custom_matches_created_by_idx on custom_matches (created_by);
+

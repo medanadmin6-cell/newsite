@@ -1,4 +1,4 @@
-import { dbOrThrow } from "./supabase";
+import { dbOrThrow, missingColumn } from "./supabase";
 import { getCountry } from "./countries";
 import { linkedSubAdmin } from "./partner";
 import { sendSms, paymentReceivedSms } from "./sms";
@@ -117,13 +117,18 @@ export async function applyDepositCredit(opts: {
   }
 
   // --- Step 1: credit the wallet (the only step allowed to fail loudly) ---
-  const { data: user, error: userErr } = await supabase
-    .from("users")
-    .select(
-      "id, phone, email, currency, country_code, balance, total_deposited, first_deposit_at, bonus_paid, verification_step, qualifying_deposits, verification_topup, referred_by",
-    )
-    .eq("id", userId)
-    .single();
+  const depositColumns =
+    "id, phone, email, currency, country_code, balance, total_deposited, first_deposit_at, bonus_paid, verification_step, qualifying_deposits, verification_topup, referred_by";
+  let { data: user, error: userErr } = await supabase.from("users").select(depositColumns).eq("id", userId).single();
+  if (missingColumn(userErr, "verification_topup")) {
+    const again = await supabase
+      .from("users")
+      .select(depositColumns.replace(", verification_topup", ""))
+      .eq("id", userId)
+      .single();
+    user = again.data ? { ...again.data, verification_topup: false } : null;
+    userErr = again.error;
+  }
 
   if (userErr || !user) {
     console.error("[deposit] player missing, releasing claim", userId, userErr);
@@ -347,11 +352,16 @@ export async function reverseDeposit(reference: string): Promise<{ ok: boolean; 
 
   if (!payment) return { ok: false, reason: "Payment not found" };
 
-  const { data: user } = await supabase
-    .from("users")
-    .select("id, balance, total_deposited, qualifying_deposits, verification_topup, country_code")
-    .eq("id", payment.user_id)
-    .single();
+  const reverseColumns = "id, balance, total_deposited, qualifying_deposits, verification_topup, country_code";
+  let { data: user } = await supabase.from("users").select(reverseColumns).eq("id", payment.user_id).single();
+  if (!user) {
+    const again = await supabase
+      .from("users")
+      .select(reverseColumns.replace(", verification_topup", ""))
+      .eq("id", payment.user_id)
+      .single();
+    user = again.data ? { ...again.data, verification_topup: false } : null;
+  }
 
   if (!user) return { ok: false, reason: "Player not found" };
 

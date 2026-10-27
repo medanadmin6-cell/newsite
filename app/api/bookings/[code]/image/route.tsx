@@ -46,43 +46,38 @@ export async function GET(_req: Request, ctx: { params: Promise<{ code: string }
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: "#03272B",
+          background: "#0f1c33",
           padding: 48,
           fontFamily: "sans-serif",
         }}
       >
-        {/* Brand bar */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
             style={{
               width: 44,
               height: 44,
               borderRadius: 11,
-              background: "#FF5252",
+              background: "#2f6bff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "#FFFFFF",
-              fontSize: 30,
+              fontSize: 28,
               fontWeight: 900,
             }}
           >
-            3
+            V
           </div>
-          <div style={{ display: "flex", fontSize: 30, fontWeight: 800, color: "#F0F4F5" }}>
-            3bt<span style={{ color: "#FF5252" }}>afric</span>
-          </div>
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 800, color: "#FFFFFF" }}>Velora</div>
         </div>
 
-        {/* The code */}
         <div style={{ display: "flex", flexDirection: "column", marginTop: 34 }}>
-          <div style={{ fontSize: 20, color: "#8DBEC4" }}>Booking Code</div>
-          <div style={{ fontSize: 82, fontWeight: 900, color: "#FF5252", letterSpacing: 8 }}>
+          <div style={{ display: "flex", fontSize: 20, color: "#9bb0d1" }}>Booking Code</div>
+          <div style={{ display: "flex", fontSize: 82, fontWeight: 900, color: "#e8a317", letterSpacing: 8 }}>
             {code.toUpperCase()}
           </div>
         </div>
 
-        {/* Selections */}
         <div style={{ display: "flex", flexDirection: "column", marginTop: 26, gap: 10 }}>
           {legs.map((l, i) => (
             <div
@@ -90,31 +85,30 @@ export async function GET(_req: Request, ctx: { params: Promise<{ code: string }
               style={{
                 display: "flex",
                 alignItems: "center",
-                background: "#053439",
+                background: "#172844",
                 borderRadius: 8,
                 padding: "12px 16px",
               }}
             >
               <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                <div style={{ fontSize: 21, color: "#F0F4F5" }}>
-                  {l.homeTeam} v {l.awayTeam}
+                <div style={{ display: "flex", fontSize: 21, color: "#F0F4F5" }}>
+                  {`${l.homeTeam} v ${l.awayTeam}`}
                 </div>
-                <div style={{ fontSize: 17, color: "#8DBEC4" }}>
-                  {l.marketLabel} · {l.outcomeLabel}
+                <div style={{ display: "flex", fontSize: 17, color: "#9bb0d1" }}>
+                  {`${l.marketLabel} · ${l.outcomeLabel}`}
                 </div>
               </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "#FF5252" }}>
+              <div style={{ display: "flex", fontSize: 24, fontWeight: 800, color: "#e8a317" }}>
                 {Number(l.odds).toFixed(2)}
               </div>
             </div>
           ))}
 
           {!legs.length && (
-            <div style={{ fontSize: 21, color: "#8DBEC4" }}>This code has no selections.</div>
+            <div style={{ display: "flex", fontSize: 21, color: "#9bb0d1" }}>This code has no selections.</div>
           )}
         </div>
 
-        {/* Footer */}
         <div
           style={{
             display: "flex",
@@ -124,16 +118,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ code: string }
           }}
         >
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 18, color: "#8DBEC4" }}>Total odds</div>
-            <div style={{ fontSize: 40, fontWeight: 900, color: "#F0F4F5" }}>
+            <div style={{ display: "flex", fontSize: 18, color: "#9bb0d1" }}>Total odds</div>
+            <div style={{ display: "flex", fontSize: 40, fontWeight: 900, color: "#FFFFFF" }}>
               {totalOdds.toFixed(2)}
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-            <div style={{ fontSize: 17, color: "#547F83" }}>
+            <div style={{ display: "flex", fontSize: 17, color: "#7aa2ff" }}>
               {expires ? `Expires ${new Date(expires).toLocaleString("en-GB")}` : "No expiry"}
             </div>
-            <div style={{ fontSize: 19, color: "#8DBEC4" }}>Load this code to bet the same slip</div>
+            <div style={{ display: "flex", fontSize: 19, color: "#9bb0d1" }}>Load this code to bet the same slip</div>
           </div>
         </div>
       </div>

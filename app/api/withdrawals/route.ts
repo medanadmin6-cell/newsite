@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/supabase";
+import { db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
 import { checkWithdrawalGate } from "@/lib/withdrawals";
 import { linkedSubAdmin } from "@/lib/partner";
@@ -28,13 +28,21 @@ export async function POST(req: Request) {
   const amount = Number(body.amount);
   if (!body.userId) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 
-  const { data: user } = await supabase
+  const columns =
+    "id, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank";
+  let { data: user, error: userErr } = await supabase
     .from("users")
-    .select(
-      "id, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank",
-    )
+    .select(columns)
     .eq("id", body.userId)
     .maybeSingle();
+  if (missingColumn(userErr, "verification_topup")) {
+    const again = await supabase
+      .from("users")
+      .select(columns.replace(", verification_topup", ""))
+      .eq("id", body.userId)
+      .maybeSingle();
+    user = again.data ? { ...again.data, verification_topup: false } : null;
+  }
 
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 

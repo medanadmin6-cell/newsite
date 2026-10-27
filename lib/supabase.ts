@@ -28,6 +28,16 @@ export function db(): SupabaseClient | null {
   return cached;
 }
 
+/** True when a query names a column this database has not added yet. */
+export function missingColumn(
+  error: { code?: string; message?: string } | null | undefined,
+  column: string,
+) {
+  if (!error || !(error.message ?? "").includes(column)) return false;
+  // 42703 is Postgres. PGRST204 is PostgREST's schema cache saying the same thing.
+  return error.code === "42703" || error.code === "PGRST204";
+}
+
 /** Same client, but throws where the caller genuinely cannot proceed without it. */
 export function dbOrThrow(): SupabaseClient {
   const client = db();

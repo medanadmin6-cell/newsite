@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { WalletPanel } from "@/components/partner/WalletPanel";
+import { CustomMatches } from "@/components/partner/CustomMatches";
 
 interface Partner {
   id: string;
@@ -276,6 +277,8 @@ function PartnerDashboard({ data, onReload }: { data: Dashboard; onReload: () =>
         dailyLimit={dailyLimit}
         onChanged={onReload}
       />
+
+      <CustomMatches approved={partner.approved} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card

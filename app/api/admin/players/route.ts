@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/supabase";
+import { db, missingColumn } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/admin-guard";
 import { checkWithdrawalGate, qualifiesForApproval } from "@/lib/withdrawals";
 
@@ -22,28 +22,34 @@ export async function GET(req: Request) {
   const filter = url.searchParams.get("filter") ?? "all";
   const search = url.searchParams.get("q")?.trim();
 
-  let query = supabase
-    .from("users")
-    .select(
-      "id, name, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, verification_step, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank, referred_by, created_at",
-    )
-    .order("created_at", { ascending: false })
-    .limit(200);
+  const columns =
+    "id, name, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, verification_step, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank, referred_by, created_at";
 
-  if (filter === "depositors") query = query.gt("total_deposited", 0);
-  if (filter === "approved") query = query.eq("withdrawal_approved", true);
   // "unverified" is not a column test. verification_step counts deposits over
   // the verification amount and caps at 4, while the gate that actually blocks
   // a withdrawal counts qualifying deposits against the country's own target.
   // Filtering on the first showed the operator a different set of players from
   // the ones the Approve button was refusing, so it is computed below.
+  const load = (cols: string) => {
+    let query = supabase.from("users").select(cols).order("created_at", { ascending: false }).limit(200);
+    if (filter === "depositors") query = query.gt("total_deposited", 0);
+    if (filter === "approved") query = query.eq("withdrawal_approved", true);
+    if (search) query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+    return query;
+  };
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+  let { data, error } = await load(columns);
+  // This project was created before the extra verification column. The list
+  // still loads; those players simply have not paid the extra deposit.
+  if (missingColumn(error, "verification_topup")) {
+    const again = await load(columns.replace(", verification_topup", ""));
+    data = (again.data ?? []).map((row) => ({ ...row, verification_topup: false }));
+    error = again.error;
   }
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: "Could not load players" }, { status: 500 });
+  if (error) {
+    console.error("[admin] players", error);
+    return NextResponse.json({ error: "Could not load players" }, { status: 500 });
+  }
 
   let players = (data ?? []).map((u) => {
     const gate = checkWithdrawalGate(u, 0);

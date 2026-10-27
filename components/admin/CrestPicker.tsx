@@ -15,10 +15,12 @@ export function CrestPicker({
   label,
   value,
   onChange,
+  uploadUrl = "/api/admin/upload",
 }: {
   label: string;
   value: string | null;
   onChange: (url: string | null) => void;
+  uploadUrl?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -32,7 +34,7 @@ export function CrestPicker({
     try {
       const body = new FormData();
       body.set("file", file);
-      const res = await fetch("/api/admin/upload", { method: "POST", body });
+      const res = await fetch(uploadUrl, { method: "POST", body });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Upload failed");

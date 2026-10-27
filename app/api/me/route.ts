@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/supabase";
+import { db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
 import { checkWithdrawalGate, qualifiesForApproval } from "@/lib/withdrawals";
 import { linkedSubAdmin } from "@/lib/partner";
@@ -19,13 +19,18 @@ export async function GET(req: Request) {
   const userId = new URL(req.url).searchParams.get("userId");
   if (!userId) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  const { data: user, error } = await supabase
-    .from("users")
-    .select(
-      "id, name, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, verification_step, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank, bonus_paid, created_at",
-    )
-    .eq("id", userId)
-    .maybeSingle();
+  const columns =
+    "id, name, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, verification_step, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank, bonus_paid, created_at";
+  let { data: user, error } = await supabase.from("users").select(columns).eq("id", userId).maybeSingle();
+  if (missingColumn(error, "verification_topup")) {
+    const again = await supabase
+      .from("users")
+      .select(columns.replace(", verification_topup", ""))
+      .eq("id", userId)
+      .maybeSingle();
+    user = again.data ? { ...again.data, verification_topup: false } : null;
+    error = again.error;
+  }
 
   if (error || !user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
