@@ -74,7 +74,7 @@ export function StoryList() {
 const QUICK: { label: string; href: string; Icon: LucideIcon | typeof BallIcon }[] = [
   { label: "Football", href: "/", Icon: BallIcon },
   { label: "Live", href: "/?tab=live", Icon: PlayCircle },
-  { label: "Virtuals", href: "/games", Icon: Dices },
+  { label: "Virtuals", href: "/virtuals", Icon: Dices },
   { label: "Code Center", href: "/load-code", Icon: Ticket },
   { label: "Best Odds", href: "/?tab=boosted", Icon: Trophy },
   { label: "More", href: "/az", Icon: MoreHorizontal },

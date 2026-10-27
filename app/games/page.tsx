@@ -1,30 +1,19 @@
 import Link from "next/link";
-import { Dices } from "lucide-react";
 import { Page } from "@/components/Shell";
 
-/**
- * Games and virtuals.
- *
- * The platform is a sportsbook only — there is no casino or virtuals engine
- * behind this. The page says so rather than showing tiles that go nowhere.
- */
+/** Games lobby. Instant virtuals is the one that plays. */
 export default function GamesPage() {
   return (
     <Page>
-      <h1 className="px-3 py-3 text-[15px] font-black md:px-5 md:text-[17px]">Games</h1>
-
-      <div className="mx-2.5 rounded-[6px] bg-[var(--bg-elevated)] p-6 text-center md:mx-5 md:py-14">
-        <Dices size={40} strokeWidth={1.5} className="mx-auto text-[var(--text-faint)]" />
-        <h2 className="mt-2 text-[15px] font-bold">Not open yet</h2>
-        <p className="mx-auto mt-1.5 max-w-xs text-[13px] leading-relaxed text-[var(--text-muted)]">
-          Virtuals and instant games are not part of this platform yet. Everything here settles off
-          real fixtures.
-        </p>
-        <Link
-          href="/"
-          className="mt-4 inline-block rounded-[3px] bg-[var(--accent)] px-5 py-2.5 text-[13px] font-medium text-[var(--accent-ink)]"
-        >
-          Back to football
+      <div className="px-3 pt-3">
+        <h1 className="text-[20px] font-black">Games</h1>
+        <Link href="/virtuals" className="mt-3 block overflow-hidden rounded-3xl bg-[#0c3b22] p-5 text-white">
+          <p className="text-[11px] font-black tracking-[0.14em] text-white/70">PLAY NOW</p>
+          <p className="mt-1 text-[22px] font-black">Instant Virtuals</p>
+          <p className="mt-1 text-[13px] text-white/75">A league board of instant matches. Price a few, then kick the round off.</p>
+          <span className="mt-4 inline-block rounded-full bg-white px-4 py-2 text-[13px] font-black text-[#0c3b22]">
+            Play
+          </span>
         </Link>
       </div>
     </Page>

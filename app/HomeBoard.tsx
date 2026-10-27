@@ -28,7 +28,7 @@ const ACTIONS = [
   { label: "Soccer", href: "/?tab=football", Icon: Trophy },
   { label: "Today", href: "/?tab=today", Icon: Calendar },
   { label: "Odds Filter", href: "/?tab=boosted", Icon: Settings },
-  { label: "Instant Virtuals", href: "/games", Icon: Zap },
+  { label: "Instant Virtuals", href: "/virtuals", Icon: Zap },
   { label: "Booking Codes", href: "/load-code", Icon: Ticket },
   { label: "ALL", href: "/az", Icon: Grid2x2 },
 ];

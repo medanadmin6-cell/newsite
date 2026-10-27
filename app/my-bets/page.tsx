@@ -82,22 +82,31 @@ export default function MyBetsPage() {
   if (!player) return null;
 
   const shown = tickets?.filter((t) => filter === "all" || t.status === filter) ?? null;
+  const openCount = tickets?.filter((t) => t.status === "pending").length ?? 0;
+  const wonCount = tickets?.filter((t) => t.status === "won").length ?? 0;
+  const staked = tickets?.reduce((sum, t) => sum + Number(t.stake), 0) ?? 0;
 
   return (
-    <Page>
-      <div className="space-y-3 px-2 pt-2 md:px-5 md:pt-4">
-        <h1 className="text-[18px] font-black md:text-[20px]">My bets</h1>
+    <Page tone="night">
+      <div className="min-h-[70vh] px-3 pb-6 pt-3 text-white">
+        <div>
+          <p className="text-[11px] font-black tracking-[0.16em] text-[#f5a524]">TICKETS</p>
+          <h1 className="text-[22px] font-black">My bets</h1>
+          <p className="mt-0.5 text-[12px] text-white/50">
+            {tickets ? `${openCount} open · ${wonCount} won · ${formatMoney(staked, player.currency)} staked` : "Loading your tickets"}
+          </p>
+        </div>
 
-        <div className="flex gap-1.5">
+        <div className="scroll-x mt-3 flex gap-1.5">
           {["all", "pending", "won", "lost", "cashed_out"].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className="rounded px-3 py-1.5 text-[12px] font-bold capitalize"
+              className="shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold capitalize"
               style={
                 filter === f
-                  ? { background: "var(--accent)", color: "var(--accent-ink)" }
-                  : { background: "var(--surface)", color: "var(--text-muted)" }
+                  ? { background: "#f5a524", color: "#1a1203" }
+                  : { background: "#1c2330", color: "rgba(255,255,255,0.7)" }
               }
             >
               {f === "pending" ? "Open" : f === "cashed_out" ? "Cashed out" : f}
@@ -112,7 +121,7 @@ export default function MyBetsPage() {
             ))}
           </div>
         ) : shown.length === 0 ? (
-          <p className="rounded bg-[var(--bg-elevated)] p-10 text-center text-[var(--text-muted)]">
+          <p className="rounded-2xl bg-[#1c2330] p-10 text-center text-[13px] text-white/60">
             No tickets here yet.
           </p>
         ) : (
@@ -168,40 +177,46 @@ function CardShell({
 function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: Ticket) => void }) {
   const [open, setOpen] = useState(false);
   const style = STATUS_STYLE[ticket.status] ?? STATUS_STYLE.pending;
+  const rail =
+    ticket.status === "won" ? "var(--win)" : ticket.status === "lost" ? "var(--lose)" : "var(--accent)";
 
   return (
-    <article className="overflow-hidden rounded bg-[var(--bg-elevated)]">
+    <article className="mt-3 flex overflow-hidden rounded-2xl bg-[#f6f1e7] text-[#1a1203]">
+      <div className="w-1.5 shrink-0" style={{ background: rail }} />
+      <div className="min-w-0 flex-1">
       <CardShell ticket={ticket} onCelebrate={onCelebrate}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[13px] font-black tracking-wider text-[var(--accent)]">{ticket.code}</p>
-            <p className="text-[11px] text-[var(--text-faint)]">
-              {ticket.selections.length} leg{ticket.selections.length === 1 ? "" : "s"} ·{" "}
-              {new Date(ticket.created_at).toLocaleDateString()}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-mono text-[13px] font-black tracking-wider">{ticket.code}</p>
+            <p className="truncate text-[12px] font-semibold text-[var(--text-muted)]">
+              {ticket.selections[0]
+                ? `${ticket.selections[0].home_team} v ${ticket.selections[0].away_team}`
+                : "Ticket"}
+              {ticket.selections.length > 1 ? ` +${ticket.selections.length - 1}` : ""}
             </p>
           </div>
           <span
-            className="rounded px-2 py-0.5 text-[10px] font-black uppercase"
+            className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase"
             style={{ background: style.bg, color: style.fg }}
           >
             {style.label}
           </span>
         </div>
 
-        <dl className="mt-2 grid grid-cols-3 gap-2 text-[12px]">
+        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-dashed border-[var(--line)] pt-2 text-[12px]">
           <div>
             <dt className="text-[10px] text-[var(--text-faint)]">Stake</dt>
             <dd className="font-bold">{formatMoney(Number(ticket.stake), ticket.currency)}</dd>
           </div>
           <div>
             <dt className="text-[10px] text-[var(--text-faint)]">Odds</dt>
-            <dd className="font-bold">{Number(ticket.total_odds).toFixed(2)}</dd>
+            <dd className="font-bold text-[var(--price)]">{Number(ticket.total_odds).toFixed(2)}</dd>
           </div>
           <div>
             <dt className="text-[10px] text-[var(--text-faint)]">
-              {ticket.status === "won" ? "Paid out" : "To win"}
+              {ticket.status === "won" ? "Paid" : "Return"}
             </dt>
-            <dd className="font-bold text-[var(--accent)]">
+            <dd className="font-bold">
               {formatMoney(Number(ticket.payout ?? ticket.potential_win), ticket.currency)}
             </dd>
           </div>
@@ -248,6 +263,7 @@ function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: 
           ))}
         </ul>
       )}
+      </div>
     </article>
   );
 }

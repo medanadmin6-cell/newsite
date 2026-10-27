@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Clock, Menu, Search, Ticket, User } from "lucide-react";
+import { Calendar, Clock, Menu, Search, Ticket, User } from "lucide-react";
 import { useSession, useSlip } from "@/lib/store";
 import { AccountDrawer } from "@/components/AccountDrawer";
 import { formatMoney } from "@/lib/countries";
@@ -124,8 +124,8 @@ const TOP = [
   { href: "/az", label: "Sports", key: "sports" },
   { href: "/?tab=upcoming", label: "Scores", key: "scores" },
   { href: "/games", label: "Games", key: "games" },
-  { href: "/games", label: "Virtual", key: "virtual" },
-  { href: "/my-bets", label: "My Matches", key: "matches" },
+  { href: "/virtuals", label: "Virtual", key: "virtual" },
+  { href: "/my-matches", label: "My Matches", key: "matches" },
 ] as const;
 
 function TopNav() {
@@ -138,7 +138,8 @@ function TopNav() {
     if (key === "sports") return pathname.startsWith("/az") || pathname.startsWith("/match");
     if (key === "scores") return pathname === "/" && (tab === "upcoming" || tab === "today");
     if (key === "games") return pathname.startsWith("/games");
-    if (key === "matches") return pathname.startsWith("/my-bets");
+    if (key === "virtual") return pathname.startsWith("/virtuals");
+    if (key === "matches") return pathname.startsWith("/my-matches");
     return false;
   };
 
@@ -193,7 +194,7 @@ export function Header() {
 
 const NAV = [
   { href: "/", label: "Velora", key: "home" },
-  { href: "/my-bets", label: "My Matches", key: "matches" },
+  { href: "/my-matches", label: "My Matches", key: "matches" },
   { href: "/my-bets", label: "My Bets", key: "bets" },
   { href: "/account", label: "Me", key: "me" },
 ] as const;
@@ -205,7 +206,8 @@ export function BottomNav() {
   const on = (key: (typeof NAV)[number]["key"]) => {
     if (key === "home") return pathname === "/";
     if (key === "me") return pathname.startsWith("/account") || pathname.startsWith("/profile");
-    if (key === "bets" || key === "matches") return pathname.startsWith("/my-bets");
+    if (key === "matches") return pathname.startsWith("/my-matches");
+    if (key === "bets") return pathname.startsWith("/my-bets");
     return false;
   };
 
@@ -227,6 +229,8 @@ export function BottomNav() {
                   <Mark size={20} />
                 ) : item.key === "me" ? (
                   <User size={20} strokeWidth={1.8} />
+                ) : item.key === "matches" ? (
+                  <Calendar size={20} strokeWidth={1.8} />
                 ) : (
                   <Ticket size={20} strokeWidth={1.8} />
                 )}
@@ -262,12 +266,25 @@ export function SlipButton() {
   );
 }
 
-export function Page({ children }: { children: React.ReactNode }) {
+export function Page({
+  children,
+  tone = "plain",
+  hideSlip = false,
+}: {
+  children: React.ReactNode;
+  tone?: "plain" | "night";
+  /** Instant Football has its own slip, so the sportsbook button stays off that screen. */
+  hideSlip?: boolean;
+}) {
   return (
     <>
       <Header />
-      <main className="min-h-[70vh] w-full bg-[var(--bg)] pb-24">{children}</main>
-      <SlipButton />
+      <main
+        className={`w-full min-h-[70vh] pb-24 ${tone === "night" ? "bg-[#12161e]" : "bg-[var(--bg)]"}`}
+      >
+        {children}
+      </main>
+      {!hideSlip && <SlipButton />}
       <BottomNav />
     </>
   );
