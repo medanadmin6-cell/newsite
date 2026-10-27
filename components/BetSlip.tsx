@@ -73,7 +73,7 @@ export function BetSlip() {
   const [booked, setBooked] = useState<{ code: string; expiresAt: string | null } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const currency = player?.currency ?? "GHS";
+  const currency = player?.currency ?? "USD";
   const oddsPerLeg = useMemo(() => legs.map((l) => l.odds), [legs]);
 
   // What this slip becomes, and what it costs.

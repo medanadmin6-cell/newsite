@@ -32,9 +32,9 @@ export async function sendSms(to: string, message: string): Promise<boolean> {
 }
 
 export function paymentReceivedSms(amount: number, currency: string, balance: number) {
-  return `Velora: Your deposit of ${currency} ${amount.toFixed(2)} was received. New balance: ${currency} ${balance.toFixed(2)}. Good luck!`;
+  return `Betvanta: Your deposit of ${currency} ${amount.toFixed(2)} was received. New balance: ${currency} ${balance.toFixed(2)}. Good luck!`;
 }
 
 export function withdrawalRequestedSms(amount: number, currency: string) {
-  return `Velora: Your withdrawal request of ${currency} ${amount.toFixed(2)} has been received and is being processed.`;
+  return `Betvanta: Your withdrawal request of ${currency} ${amount.toFixed(2)} has been received and is being processed.`;
 }

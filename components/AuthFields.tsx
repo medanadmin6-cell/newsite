@@ -7,7 +7,7 @@ import { allCountries, type CountryConfig } from "@/lib/countries";
 
 /**
  * Auth form furniture. Country row, phone and password fields, and the
- * full-width action. The fields stay light on the page so they match Velora.
+ * full-width action. The fields stay light on the page so they match Betvanta.
  */
 
 /**
@@ -44,6 +44,7 @@ export function CountryBar({
         <div className="flex items-center gap-2">
           <Flag code={country.code} size={20} />
           <span className="text-[15px] font-medium text-[var(--text-bright)]">{country.name}</span>
+          <span className="text-[13px] font-bold text-[var(--text-muted)]">{country.currency}</span>
           <button
             type="button"
             onClick={() => setPicking((p) => !p)}
@@ -81,7 +82,7 @@ export function CountryBar({
               >
                 <Flag code={c.code} />
                 <span className="flex-1">{c.name}</span>
-                <span className="text-[12px] text-[var(--text-muted)]">+{c.dialCode}</span>
+                <span className="text-[12px] text-[var(--text-muted)]">{c.currency} · +{c.dialCode}</span>
               </button>
             </li>
           ))}

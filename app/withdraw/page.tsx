@@ -29,7 +29,7 @@ export default function WithdrawPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [rechecking, setRechecking] = useState(false);
 
-  const country = player ? getCountry(player.country_code) : getCountry("GH");
+  const country = getCountry(player?.country_code);
 
   useEffect(() => {
     if (hydrated && !player) router.replace("/login");

@@ -44,7 +44,7 @@ export default function DepositPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const country = player ? getCountry(player.country_code) : getCountry("GH");
+  const country = getCountry(player?.country_code);
   const phone = phoneEdit ?? player?.phone ?? "";
   const chosenNetwork = network ?? country.networks[0];
   const whatsapp = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
@@ -331,7 +331,7 @@ export default function DepositPage() {
                 {settings.deposit_account_number ?? "—"}
               </p>
               <p className="text-[12px] text-[var(--text-muted)]">
-                {settings.deposit_account_name ?? "Velora"} ·{" "}
+                {settings.deposit_account_name ?? "Betvanta"} ·{" "}
                 {settings.deposit_account_network ?? "Mobile Money"}
               </p>
             </div>

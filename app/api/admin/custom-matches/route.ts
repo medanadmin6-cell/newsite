@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
-  const result = await createCustomMatch(body, null, "3btafric Special");
+  const result = await createCustomMatch(body, null, "Betvanta Special");
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ match: result.match });
 }

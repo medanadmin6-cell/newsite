@@ -66,9 +66,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ code: string }
               fontWeight: 900,
             }}
           >
-            V
+            B
           </div>
-          <div style={{ display: "flex", fontSize: 30, fontWeight: 800, color: "#FFFFFF" }}>Velora</div>
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 800, color: "#FFFFFF" }}>Betvanta</div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", marginTop: 34 }}>

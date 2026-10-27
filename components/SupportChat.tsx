@@ -55,7 +55,7 @@ export function SupportChat() {
     <div className="fixed bottom-[136px] right-3 z-20 flex max-h-[60vh] w-[min(20rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl bg-[var(--bg-elevated)] shadow-2xl ring-1 ring-[var(--line)]">
       <header className="flex items-center justify-between bg-[var(--surface)] px-3 py-2.5">
         <div>
-          <p className="text-[13px] font-bold">Velora help</p>
+          <p className="text-[13px] font-bold">Betvanta help</p>
           <p className="text-[10px] text-[var(--text-faint)]">Common questions</p>
         </div>
         <button onClick={() => setOpen(false)} aria-label="Close support" className="text-[var(--text-muted)]">

@@ -9,7 +9,7 @@ import { AccountDrawer } from "@/components/AccountDrawer";
 import { formatMoney } from "@/lib/countries";
 
 /**
- * Velora shell.
+ * Betvanta shell.
  *
  * The header carries the wordmark, the wallet and the section links. The
  * bottom bar is the four items from the phone build. Balance polling, the
@@ -20,7 +20,17 @@ import { formatMoney } from "@/lib/countries";
 function Mark({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-      <path fill="currentColor" d="M5.5 6h7.1L16 19.4 19.4 6h7.1L18.2 26h-4.4L5.5 6z" />
+      <text
+        x="16"
+        y="24"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="24"
+        fontWeight="800"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+      >
+        B
+      </text>
     </svg>
   );
 }
@@ -31,7 +41,7 @@ function Wordmark() {
       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2f6bff]">
         <Mark size={16} />
       </span>
-      <span className="text-[16px] font-black tracking-tight">Velora</span>
+      <span className="text-[16px] font-black tracking-tight">Betvanta</span>
     </span>
   );
 }
@@ -83,7 +93,7 @@ function HeaderActions({ onOpenAccount }: { onOpenAccount: () => void }) {
 
   if (!hydrated) return <div className="h-7 w-24 rounded-full bg-[var(--surface-2)]" />;
 
-  const money = player ? formatMoney(Number(player.balance), player.currency) : "GH₵0.00";
+  const money = player ? formatMoney(Number(player.balance), player.currency) : formatMoney(0, "USD");
 
   return (
     <>
@@ -169,7 +179,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-[#0f1c33]">
       <div className="flex h-[56px] w-full items-center gap-2 px-3">
-        <Link href="/" className="flex shrink-0 items-center" aria-label="Velora home">
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Betvanta home">
           <Wordmark />
         </Link>
         <div className="flex flex-1 items-center justify-end gap-2.5">
@@ -191,7 +201,7 @@ export function Header() {
 }
 
 const NAV = [
-  { href: "/", label: "Velora", key: "home" },
+  { href: "/", label: "Betvanta", key: "home" },
   { href: "/my-matches", label: "My Matches", key: "matches" },
   { href: "/my-bets", label: "My Bets", key: "bets" },
   { href: "/account", label: "Me", key: "me" },

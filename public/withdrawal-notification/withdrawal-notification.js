@@ -3,7 +3,7 @@
 
   const defaults = {
     assetBase: '/withdrawal-notification/assets',
-    brandName: 'Velora',
+    brandName: 'Betvanta',
     alertDuration: 2200,
     bannerDuration: 5000,
     playSound: true
@@ -115,7 +115,7 @@
     const data = Object.assign({}, settings, options || {});
     const amount = requireMoney(data.amount, 'amount');
     const currentBalance = requireMoney(data.currentBalance, 'currentBalance');
-    const currency = String(data.currency || 'GHS').toUpperCase();
+    const currency = String(data.currency || 'USD').toUpperCase();
 
     createUi();
     settings = Object.assign({}, settings, data);

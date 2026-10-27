@@ -78,7 +78,7 @@ export default function PartnerPage() {
     return (
       <div className="mx-auto max-w-sm px-4 py-10">
         <Link href="/" className="mb-8 flex justify-center">
-          <Image src="/logo.svg" alt="Velora" width={160} height={35} priority />
+          <Image src="/logo.svg" alt="Betvanta" width={160} height={35} priority />
         </Link>
 
         <div className="mb-4 flex gap-1.5">
@@ -231,7 +231,7 @@ function PartnerDashboard({ data, onReload }: { data: Dashboard; onReload: () =>
     <div className="mx-auto max-w-5xl space-y-3 px-4 py-6 md:px-6">
       <header className="flex items-center justify-between">
         <Link href="/">
-          <Image src="/logo.svg" alt="Velora" width={130} height={29} />
+          <Image src="/logo.svg" alt="Betvanta" width={130} height={29} />
         </Link>
         <button
           onClick={async () => {

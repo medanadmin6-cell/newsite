@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <rect width="32" height="32" rx="8" fill="#2f6bff"/>
-  <path fill="#fff" d="M6.5 7h6.2L16 18.6 19.3 7h6.2L18 25h-4L6.5 7z"/>
+  <text x="16" y="23" text-anchor="middle"
+        font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,Arial,sans-serif"
+        font-size="20" font-weight="800" fill="#fff">B</text>
 </svg>

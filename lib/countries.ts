@@ -40,6 +40,24 @@ export interface CountryConfig {
 }
 
 const BASE: Record<string, CountryConfig> = {
+  US: {
+    code: "US",
+    name: "United States",
+    currency: "USD",
+    currencySymbol: "$",
+    dialCode: "1",
+    phoneDigits: 10,
+    gateway: "flutterwave_card",
+    payoutRail: "bank",
+    kyc: [],
+    minFirstDeposit: 25,
+    minDeposit: 25,
+    maxDeposit: 10000,
+    verificationAmount: 25,
+    withdrawQualifyCount: 6,
+    withdrawQualifyAmount: 25,
+    networks: ["Card", "Bank transfer"],
+  },
   GH: {
     code: "GH",
     name: "Ghana",
@@ -129,10 +147,13 @@ function num(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/** New accounts and logged-out screens start on the dollar wallet. */
+export const DEFAULT_COUNTRY = "US";
+
 /** Country config with the per-country env overrides applied. */
 export function getCountry(code: string | null | undefined): CountryConfig {
-  const cc = (code ?? "GH").toUpperCase();
-  const base = BASE[cc] ?? BASE.GH;
+  const cc = (code ?? DEFAULT_COUNTRY).toUpperCase();
+  const base = BASE[cc] ?? BASE[DEFAULT_COUNTRY];
   return {
     ...base,
     minFirstDeposit: num(`MIN_FIRST_DEPOSIT_${base.code}`, base.minFirstDeposit),

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wallet, ArrowRight, Banknote } from "lucide-react";
 import { useSession } from "@/lib/store";
-import { allCountries, getCountry, formatMoney } from "@/lib/countries";
+import { allCountries, DEFAULT_COUNTRY, getCountry, formatMoney } from "@/lib/countries";
 
 /**
  * The partner's own betting account.
@@ -43,7 +43,7 @@ export function WalletPanel({
   const router = useRouter();
   const signIn = useSession((s) => s.signIn);
 
-  const [countryCode, setCountryCode] = useState("GH");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState(defaultPhone ?? "");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);

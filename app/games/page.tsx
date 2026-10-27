@@ -9,7 +9,7 @@ export default function GamesPage() {
         <p className="text-[11px] font-bold tracking-[0.16em] text-[var(--accent)]">PLAY</p>
         <h1 className="text-[26px] font-black text-[var(--text-bright)]">Games</h1>
         <p className="mt-1 max-w-sm text-[13px] text-[var(--text-muted)]">
-          One game is open. It uses the same wallet as the rest of Velora.
+          One game is open. It uses the same wallet as the rest of Betvanta.
         </p>
         <Link href="/virtuals" className="mt-4 block rounded-3xl bg-[#0f1c33] p-5 text-white">
           <p className="text-[11px] font-bold tracking-[0.16em] text-white/50">INSTANT FOOTBALL</p>

@@ -30,7 +30,7 @@ export function BookedCode({
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const link = `${origin}/load-code?code=${code}`;
   const imageUrl = `/api/bookings/${code}/image`;
-  const message = `Load my Velora code ${code} — ${link}`;
+  const message = `Load my Betvanta code ${code} — ${link}`;
 
   const copy = (value: string, which: "code" | "link") => {
     navigator.clipboard?.writeText(value).then(
@@ -59,7 +59,7 @@ export function BookedCode({
   const shareInApp = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Velora code ${code}`, text: message, url: link });
+        await navigator.share({ title: `Betvanta code ${code}`, text: message, url: link });
         return;
       } catch {
         /* dismissed */
@@ -160,7 +160,7 @@ export function BookedCode({
         <ShareAction
           label="Save"
           href={imageUrl}
-          download={`velora-${code}.png`}
+          download={`betvanta-${code}.png`}
           icon={<Download size={19} strokeWidth={2} />}
         />
       </div>

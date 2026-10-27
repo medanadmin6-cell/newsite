@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/store";
-import { getCountry, normalisePhone } from "@/lib/countries";
+import { DEFAULT_COUNTRY, getCountry, normalisePhone } from "@/lib/countries";
 import { CountryBar, PhoneField, PasswordField, PrimaryButton } from "@/components/AuthFields";
 
 function LoginForm() {
@@ -12,7 +12,7 @@ function LoginForm() {
   const next = useSearchParams().get("next") ?? "/";
   const signIn = useSession((s) => s.signIn);
 
-  const [countryCode, setCountryCode] = useState("GH");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -62,7 +62,7 @@ function LoginForm() {
         />
 
         <h1 className="mt-8 text-[28px] font-black leading-none text-[var(--text-bright)]">Sign in</h1>
-        <p className="mt-2 text-[13px] text-[var(--text-muted)]">Use the number on your Velora account.</p>
+        <p className="mt-2 text-[13px] text-[var(--text-muted)]">Use the number on your Betvanta account.</p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           <PhoneField country={country} value={phone} onChange={setPhone} autoFocus />

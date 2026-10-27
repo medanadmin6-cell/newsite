@@ -66,7 +66,7 @@ export function VerifyGate({
         <p className="mt-3 text-[17px] leading-relaxed text-[var(--text-bright)]">
           Complete your verification with a{" "}
           <span className="font-black">{formatMoney(amount, currency)}</span> deposit to unlock
-          withdrawals on your Velora account.
+          withdrawals on your Betvanta account.
         </p>
 
         <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">

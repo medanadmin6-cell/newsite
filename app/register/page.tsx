@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/store";
-import { getCountry } from "@/lib/countries";
+import { DEFAULT_COUNTRY, getCountry } from "@/lib/countries";
 import { CountryBar, PhoneField, PasswordField, Check, PrimaryButton } from "@/components/AuthFields";
 
 function RegisterForm() {
@@ -12,7 +12,7 @@ function RegisterForm() {
   const signIn = useSession((s) => s.signIn);
   const refFromUrl = useSearchParams().get("ref") ?? "";
 
-  const [countryCode, setCountryCode] = useState("GH");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");

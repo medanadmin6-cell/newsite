@@ -38,7 +38,7 @@ function AdminLoginForm() {
   return (
     <div className="mx-auto max-w-xs py-20">
       <div className="mb-8 flex justify-center">
-        <Image src="/logo.svg" alt="Velora" width={150} height={33} priority />
+        <Image src="/logo.svg" alt="Betvanta" width={150} height={33} priority />
       </div>
       <h1 className="mb-4 text-center text-[15px] font-bold">Operator console</h1>
       <form onSubmit={submit} className="space-y-3">

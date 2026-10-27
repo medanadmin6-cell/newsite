@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getCountry } from "@/lib/countries";
+import { DEFAULT_COUNTRY, getCountry } from "@/lib/countries";
 import { CountryBar, PhoneField, PrimaryButton } from "@/components/AuthFields";
 
 /**
@@ -13,7 +13,7 @@ import { CountryBar, PhoneField, PrimaryButton } from "@/components/AuthFields";
  */
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [countryCode, setCountryCode] = useState("GH");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState("");
   const [sent, setSent] = useState(false);
 

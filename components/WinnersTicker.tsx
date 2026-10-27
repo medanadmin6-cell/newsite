@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
  */
 
 const PREFIXES = ["024", "054", "055", "059", "020", "026", "027"];
-const CURRENCIES = ["GH₵", "₦", "KSh"];
+const CURRENCIES = ["$", "GH₵", "₦", "KSh"];
 
 function maskedNumber(seed: number): string {
   const prefix = PREFIXES[seed % PREFIXES.length];

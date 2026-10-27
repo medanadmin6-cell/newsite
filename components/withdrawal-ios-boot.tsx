@@ -17,7 +17,7 @@ export function WithdrawalIosBoot() {
     const boot = () => {
       window.WithdrawalNotification?.configure({
         assetBase: "/withdrawal-notification/assets",
-        brandName: "Velora",
+        brandName: "Betvanta",
       });
     };
     if (window.WithdrawalNotification) {

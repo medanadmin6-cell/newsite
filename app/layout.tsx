@@ -14,7 +14,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Velora | Football Odds, Mobile Money Deposits",
+  title: "Betvanta | Football Odds, Mobile Money Deposits",
   description:
     "Bet on football with mobile money. Fast deposits, fast payouts, booking codes and daily boosted odds.",
   manifest: "/manifest.json",

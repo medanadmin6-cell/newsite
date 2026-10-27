@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (who instanceof NextResponse) return who;
 
   const body = await req.json().catch(() => null);
-  const result = await createCustomMatch(body, who.id, "Velora Special");
+  const result = await createCustomMatch(body, who.id, "Betvanta Special");
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ match: result.match });
 }

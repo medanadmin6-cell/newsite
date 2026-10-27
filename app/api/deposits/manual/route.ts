@@ -50,6 +50,18 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+  if (amount < country.minDeposit) {
+    return NextResponse.json(
+      { error: `The smallest deposit is ${country.currencySymbol}${country.minDeposit}` },
+      { status: 400 },
+    );
+  }
+  if (amount > country.maxDeposit) {
+    return NextResponse.json(
+      { error: `The largest single deposit is ${country.currencySymbol}${country.maxDeposit}` },
+      { status: 400 },
+    );
+  }
 
   const reference = paymentReference("MAN");
   let screenshotPath: string | null = null;

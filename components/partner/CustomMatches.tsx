@@ -29,7 +29,7 @@ interface CustomMatch {
 const BLANK = {
   home_team: "",
   away_team: "",
-  league: "Velora Special",
+  league: "Betvanta Special",
   kickoff: "",
   odds_home: "2.00",
   odds_draw: "3.20",

@@ -62,8 +62,8 @@ export function showWithdrawalIos(options: WithdrawalIosPayload): void {
   const payload = {
     amount: options.amount,
     currentBalance: options.currentBalance,
-    currency: options.currency || "GHS",
-    brandName: options.brandName || "Velora",
+    currency: options.currency || "USD",
+    brandName: options.brandName || "Betvanta",
     assetBase: "/withdrawal-notification/assets",
   };
 

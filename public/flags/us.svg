@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 16" width="24" height="16" role="img" aria-label="United States">
+  <rect width="24" height="16" fill="#BF0A30"/>
+  <g fill="#fff">
+    <rect y="1.23" width="24" height="1.23"/>
+    <rect y="3.69" width="24" height="1.23"/>
+    <rect y="6.15" width="24" height="1.23"/>
+    <rect y="8.62" width="24" height="1.23"/>
+    <rect y="11.08" width="24" height="1.23"/>
+    <rect y="13.54" width="24" height="1.23"/>
+  </g>
+  <rect width="10" height="8.62" fill="#002868"/>
+</svg>
