@@ -57,9 +57,10 @@ export default function ProfilePage() {
   return (
     <Page>
       <div className="px-4 py-4 md:mx-auto md:max-w-2xl md:px-5">
-        <h1 className="text-[18px] font-black">Personal page</h1>
+        <h1 className="text-[26px] font-black text-[var(--text-bright)]">Personal page</h1>
+        <p className="mt-1 text-[13px] text-[var(--text-muted)]">The details tied to this account.</p>
 
-        <section className="mt-3 overflow-hidden rounded bg-[var(--bg-elevated)]">
+        <section className="mt-4 overflow-hidden rounded-2xl bg-white shadow-sm">
           <Field label="Name" value={u?.name ?? player.name} />
           <Field label="Phone" value={player.phone} />
           <Field label="Email" value={u?.email ?? "—"} />
@@ -70,7 +71,7 @@ export default function ProfilePage() {
 
         <h2 className="mt-6 text-[15px] font-bold">Account standing</h2>
 
-        <section className="mt-2 overflow-hidden rounded bg-[var(--bg-elevated)]">
+        <section className="mt-2 overflow-hidden rounded-2xl bg-white shadow-sm">
           <div className="flex items-start gap-3 border-b border-[var(--line)] px-4 py-3.5">
             <span style={{ color: unlocked ? "var(--win)" : "var(--pending)" }}>
               {unlocked ? (

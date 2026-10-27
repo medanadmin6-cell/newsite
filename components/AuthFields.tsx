@@ -6,9 +6,8 @@ import { Eye, EyeOff, X, ChevronRight, Check as CheckGlyph } from "lucide-react"
 import { allCountries, type CountryConfig } from "@/lib/countries";
 
 /**
- * The auth form furniture, following the reference login: a country row with a
- * Change affordance, and fields that invert — a pale fill sitting inside a
- * lifted, bordered shell on the dark ground.
+ * Auth form furniture. Country row, phone and password fields, and the
+ * full-width action. The fields stay light on the page so they match Velora.
  */
 
 /**
@@ -22,7 +21,7 @@ export function Flag({ code, size = 18 }: { code: string; size?: number }) {
       alt=""
       width={size}
       height={Math.round((size * 2) / 3)}
-      className="shrink-0 rounded-[2px]"
+      className="shrink-0 rounded-sm"
     />
   );
 }
@@ -68,7 +67,7 @@ export function CountryBar({
       </div>
 
       {picking && (
-        <ul className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded bg-[var(--field)] ring-1 ring-[var(--field-line)]">
+        <ul className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-[var(--line)]">
           {allCountries().map((c) => (
             <li key={c.code}>
               <button
@@ -105,8 +104,8 @@ export function PhoneField({
   autoFocus?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-[3px] bg-[var(--field)] px-3 py-2 ring-1 ring-[var(--field-line)]">
-      <span className="shrink-0 text-[15px] text-[var(--text-muted)]">+{country.dialCode}</span>
+    <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-[var(--line)]">
+      <span className="shrink-0 text-[15px] font-bold text-[var(--text-muted)]">+{country.dialCode}</span>
       <div className="relative flex-1">
         <input
           type="tel"
@@ -115,7 +114,7 @@ export function PhoneField({
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, ""))}
-          className="w-full rounded-[2px] bg-[var(--input)] py-2 pl-2 pr-7 text-[15px] text-[var(--input-ink)] outline-none placeholder:text-[var(--input-placeholder)] focus:ring-1 focus:ring-[var(--accent)]"
+          className="w-full rounded-xl bg-[var(--surface-2)] py-2.5 pl-2 pr-7 text-[15px] text-[var(--input-ink)] outline-none placeholder:text-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent)]"
         />
         {value && (
           <button
@@ -147,14 +146,14 @@ export function PasswordField({
   const [shown, setShown] = useState(false);
 
   return (
-    <div className="flex items-center gap-2 rounded-[3px] bg-[var(--field)] px-3 py-2 ring-1 ring-[var(--field-line)]">
+    <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-[var(--line)]">
       <input
         type={shown ? "text" : "password"}
         autoComplete={autoComplete}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="min-w-0 flex-1 rounded-[2px] bg-[var(--input)] px-2 py-2 text-[15px] text-[var(--input-ink)] outline-none placeholder:text-[var(--input-placeholder)] focus:ring-1 focus:ring-[var(--accent)]"
+        className="min-w-0 flex-1 rounded-xl bg-[var(--surface-2)] px-2 py-2.5 text-[15px] text-[var(--input-ink)] outline-none placeholder:text-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent)]"
       />
       <button
         type="button"
@@ -168,7 +167,7 @@ export function PasswordField({
   );
 }
 
-/** Square checkbox with a lime tick, matching the reference pair. */
+/** Checkbox with a blue tick. */
 export function Check({
   checked,
   onChange,
@@ -181,7 +180,7 @@ export function Check({
   return (
     <label className="flex cursor-pointer select-none items-center gap-2">
       <span
-        className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[3px] ring-1 transition-colors"
+        className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md transition-colors"
         style={{
           background: checked ? "var(--accent)" : "transparent",
           boxShadow: `inset 0 0 0 1px ${checked ? "var(--accent)" : "var(--text-muted)"}`,
@@ -201,13 +200,11 @@ export function Check({
 }
 
 /**
- * The full-width lime action the reference uses for Login and Register.
+ * The full-width action for Login and Register.
  *
- * It is lime in every state. A greyed or faded version of it over this ground
- * turns into a dark slab that reads as a broken button, so an empty form is
- * answered by the form telling the player what is missing, not by the button
- * going out. The only time it changes is while a submission is in flight, and
- * then it says so.
+ * It stays blue in every state. An empty form tells the player what is
+ * missing instead of fading the button out. It only changes while a
+ * submission is in flight, and then the label says so.
  */
 export function PrimaryButton({
   children,
@@ -216,7 +213,7 @@ export function PrimaryButton({
   return (
     <button
       {...props}
-      className="w-full rounded-[3px] bg-[var(--accent)] py-3.5 text-[16px] font-medium text-[var(--accent-ink)] disabled:cursor-wait"
+      className="w-full rounded-full bg-[var(--accent)] py-3.5 text-[16px] font-black text-white disabled:cursor-wait"
     >
       {children}
     </button>

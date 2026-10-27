@@ -72,7 +72,7 @@ export default function MyMatchesPage() {
   return (
     <Page>
       <div className="px-3 pt-3">
-        <h1 className="text-[20px] font-black">My matches</h1>
+        <h1 className="text-[26px] font-black text-[var(--text-bright)]">My matches</h1>
         <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">Fixtures you have a pick on</p>
 
         <div className="mt-3 grid grid-cols-2 rounded-full bg-white p-1 shadow-sm">

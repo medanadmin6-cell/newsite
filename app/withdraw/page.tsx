@@ -141,11 +141,11 @@ export default function WithdrawPage() {
 
   return (
     <Page>
-      <div className="mx-auto max-w-md space-y-3">
-        <h1 className="text-[18px] font-black">Withdraw</h1>
+      <div className="mx-auto max-w-md space-y-3 px-3 pt-4">
+        <h1 className="text-[26px] font-black text-[var(--text-bright)]">Withdraw</h1>
 
         {allowed === null && (
-          <p className="rounded bg-[var(--bg-elevated)] px-4 py-3 text-[13px] text-[var(--text-muted)]">
+          <p className="rounded-2xl bg-white px-4 py-3 text-[13px] text-[var(--text-muted)] shadow-sm">
             Loading your wallet…
           </p>
         )}
@@ -170,7 +170,7 @@ export default function WithdrawPage() {
         )}
 
         {allowed && (
-        <div className="rounded bg-[var(--bg-elevated)] p-4">
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
           <p className="text-[11px] uppercase tracking-wide text-[var(--text-faint)]">Available</p>
           <p className="text-[26px] font-black text-[var(--accent)]">
             {formatMoney(Number(player.balance), player.currency)}
@@ -180,7 +180,7 @@ export default function WithdrawPage() {
         )}
 
         {allowed && (
-        <form onSubmit={submit} className="space-y-3 rounded bg-[var(--bg-elevated)] p-4">
+        <form onSubmit={submit} className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
               Amount ({country.currency})

@@ -17,7 +17,7 @@ export default function HowToPlayPage() {
   return (
     <Page>
       <div className="px-4 py-4 md:mx-auto md:max-w-2xl md:px-5">
-        <h1 className="text-[20px] font-black">How to play</h1>
+        <h1 className="text-[26px] font-black text-[var(--text-bright)]">How to play</h1>
 
         <Section title="Placing a bet">
           <p>
@@ -148,8 +148,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="mt-6 scroll-mt-16">
-      <h2 className="mb-2 text-[15px] font-bold text-[var(--text-bright)]">{title}</h2>
+    <section id={id} className="mt-4 scroll-mt-16 rounded-2xl bg-white p-4 shadow-sm">
+      <h2 className="mb-2 text-[15px] font-black text-[var(--text-bright)]">{title}</h2>
       <div className="space-y-2 text-[13px] leading-relaxed text-[var(--text-muted)]">{children}</div>
     </section>
   );

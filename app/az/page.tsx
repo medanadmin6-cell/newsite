@@ -32,7 +32,7 @@ export default function AzMenuPage() {
 
   return (
     <Page>
-      <h1 className="px-3 py-3 text-[15px] font-black md:px-5 md:text-[17px]">A-Z Menu</h1>
+      <h1 className="px-3 pb-1 pt-4 text-[26px] font-black text-[var(--text-bright)] md:px-5">Sports</h1>
 
       {feed === null ? (
         <p className="p-8 text-center text-[13px] text-[var(--text-muted)]">Loading…</p>
@@ -43,7 +43,7 @@ export default function AzMenuPage() {
       ) : (
         <div className="space-y-2 px-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 md:px-5 lg:grid-cols-3">
           {byCountry.map(([country, leagues]) => (
-            <section key={country} className="overflow-hidden rounded-[6px] bg-[var(--bg-elevated)]">
+            <section key={country} className="overflow-hidden rounded-2xl bg-white shadow-sm">
               <h2 className="bg-[var(--surface)] px-3 py-2 text-[12px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                 {country}
               </h2>

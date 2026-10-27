@@ -443,16 +443,16 @@ export default function DepositPage() {
 
 function DepositHeader({ onBack }: { onBack: () => void }) {
   return (
-    <header className="sticky top-0 z-40 bg-[var(--surface)]">
-      <div className="mx-auto flex h-[52px] max-w-2xl items-center gap-3 px-4">
-        <button onClick={onBack} aria-label="Back" className="text-[var(--text-bright)]">
+    <header className="sticky top-0 z-40 bg-[#0f1c33]">
+      <div className="mx-auto flex h-[56px] max-w-2xl items-center gap-3 px-4">
+        <button onClick={onBack} aria-label="Back" className="text-white">
           <ArrowLeft size={22} strokeWidth={2} />
         </button>
-        <h1 className="flex-1 text-[19px] font-bold text-[var(--text-bright)]">Deposit</h1>
-        <Link href="/how-to-play" aria-label="Help" className="text-[var(--text-bright)]">
+        <h1 className="flex-1 text-[19px] font-black text-white">Deposit</h1>
+        <Link href="/how-to-play" aria-label="Help" className="text-white/80">
           <CircleHelp size={20} strokeWidth={1.9} />
         </Link>
-        <Link href="/" aria-label="Home" className="text-[var(--text-bright)]">
+        <Link href="/" aria-label="Home" className="text-white/80">
           <Home size={20} strokeWidth={1.9} />
         </Link>
       </div>
@@ -474,7 +474,7 @@ function SwitchRow({
   onAction: () => void;
 }) {
   return (
-    <div className="mx-4 mt-3 flex items-center gap-3 rounded-[4px] bg-[var(--bg-elevated)] px-3 py-3.5 ring-1 ring-[var(--line)]">
+    <div className="mx-4 mt-3 flex items-center gap-3 rounded-2xl bg-white px-3 py-3.5 shadow-sm">
       {icon}
       <span className="flex-1 text-[15px]">{value}</span>
       <button

@@ -61,19 +61,22 @@ function LoginForm() {
           onClose={() => router.push("/")}
         />
 
-        <form onSubmit={submit} className="mt-8 space-y-4">
+        <h1 className="mt-8 text-[28px] font-black leading-none text-[var(--text-bright)]">Sign in</h1>
+        <p className="mt-2 text-[13px] text-[var(--text-muted)]">Use the number on your Velora account.</p>
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
           <PhoneField country={country} value={phone} onChange={setPhone} autoFocus />
           <PasswordField value={password} onChange={setPassword} />
 
           {error && (
-            <p className="rounded-[3px] bg-[var(--lose-bg)] px-3 py-2.5 text-[13px] text-[var(--lose)]">
+            <p className="rounded-2xl bg-[var(--lose-bg)] px-3 py-2.5 text-[13px] text-[var(--lose)]">
               {error}
             </p>
           )}
 
           <div className="pt-2">
             <PrimaryButton type="submit" disabled={busy}>
-              {busy ? "Signing in…" : "Login"}
+              {busy ? "Signing in…" : "Sign in"}
             </PrimaryButton>
           </div>
         </form>

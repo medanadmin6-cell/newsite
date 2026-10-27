@@ -16,7 +16,7 @@ export default function AccountStatusPage() {
     <div className="min-h-screen bg-[var(--bg)]">
       <div className="mx-auto w-full max-w-[455px] px-6 pb-16 pt-5">
         <div className="flex items-center justify-between py-1">
-          <h1 className="text-[16px] font-medium">Account status</h1>
+          <h1 className="text-[28px] font-black leading-none text-[var(--text-bright)]">Account status</h1>
           <button
             onClick={() => router.push("/login")}
             aria-label="Close"
@@ -27,16 +27,16 @@ export default function AccountStatusPage() {
         </div>
 
         <div className="mt-6 space-y-3">
-          <section className="rounded-[3px] bg-[var(--field)] p-4 ring-1 ring-[var(--field-line)]">
-            <h2 className="text-[15px] font-medium">Deactivate</h2>
+          <section className="rounded-2xl bg-white p-4 shadow-sm">
+            <h2 className="text-[15px] font-black">Deactivate</h2>
             <p className="mt-1 text-[14px] leading-relaxed text-[var(--text-muted)]">
               Closes your account and stops all activity. Any balance is paid out first — withdraw
               before you ask us to close it.
             </p>
           </section>
 
-          <section className="rounded-[3px] bg-[var(--field)] p-4 ring-1 ring-[var(--field-line)]">
-            <h2 className="text-[15px] font-medium">Reactivate</h2>
+          <section className="rounded-2xl bg-white p-4 shadow-sm">
+            <h2 className="text-[15px] font-black">Reactivate</h2>
             <p className="mt-1 text-[14px] leading-relaxed text-[var(--text-muted)]">
               We can reopen a closed account on the same phone number. Your bet history comes back
               with it.
@@ -48,12 +48,12 @@ export default function AccountStatusPage() {
               href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-[3px] bg-[var(--accent)] py-3.5 text-center text-[16px] font-medium text-[var(--accent-ink)]"
+              className="block rounded-full bg-[var(--accent)] py-3.5 text-center text-[16px] font-black text-white"
             >
               Contact support
             </a>
           ) : (
-            <p className="rounded-[3px] bg-[var(--field)] px-4 py-3.5 text-center text-[14px] text-[var(--text-muted)] ring-1 ring-[var(--field-line)]">
+            <p className="rounded-2xl bg-white px-4 py-3.5 text-center text-[14px] text-[var(--text-muted)] shadow-sm">
               Support contact is not configured on this deployment.
             </p>
           )}

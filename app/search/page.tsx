@@ -33,13 +33,14 @@ export default function SearchPage() {
 
   return (
     <Page>
-      <div className="p-2.5 md:px-5 md:py-4">
+      <div className="px-3 pt-4 md:px-5">
+        <h1 className="mb-3 text-[26px] font-black text-[var(--text-bright)]">Search</h1>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search teams, leagues or countries"
+          placeholder="Teams, leagues or countries"
           autoFocus
-          className="w-full rounded-[4px] bg-[var(--bg-elevated)] px-3 py-3 text-[14px] outline-none placeholder:text-[var(--text-faint)] focus:ring-1 focus:ring-[var(--accent)] md:mx-auto md:max-w-2xl md:block"
+          className="w-full rounded-2xl bg-white px-4 py-3 text-[14px] shadow-sm outline-none placeholder:text-[var(--text-faint)] focus:ring-2 focus:ring-[var(--accent)] md:mx-auto md:block md:max-w-2xl"
         />
       </div>
 

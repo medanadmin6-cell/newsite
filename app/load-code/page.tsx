@@ -40,8 +40,8 @@ export default function LoadCodePage() {
 
   return (
     <Page>
-      <div className="mx-auto max-w-sm space-y-4 py-6">
-        <h1 className="text-[18px] font-black">Load a booking code</h1>
+      <div className="mx-auto max-w-sm space-y-4 px-3 py-4">
+        <h1 className="text-[26px] font-black leading-none text-[var(--text-bright)]">Booking code</h1>
         <p className="text-[13px] text-[var(--text-muted)]">
           Enter a code someone shared with you to get the same selections on your slip.
         </p>
@@ -52,7 +52,7 @@ export default function LoadCodePage() {
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="ABC123"
             maxLength={6}
-            className="w-full rounded bg-[var(--surface-2)] px-3 py-4 text-center text-[24px] font-black tracking-[0.25em] outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            className="w-full rounded-2xl bg-white px-3 py-4 text-center text-[24px] font-black tracking-[0.25em] shadow-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
           />
 
           {error && (
@@ -72,7 +72,7 @@ export default function LoadCodePage() {
           <button
             type="submit"
             disabled={busy || code.trim().length < 4}
-            className="w-full rounded bg-[var(--accent)] py-3 text-[14px] font-black text-[var(--accent-ink)] disabled:opacity-50"
+            className="w-full rounded-full bg-[var(--accent)] py-3 text-[14px] font-black text-white disabled:opacity-50"
           >
             {busy ? "Loading…" : "Load code"}
           </button>

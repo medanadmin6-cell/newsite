@@ -50,10 +50,11 @@ export default function TransactionsPage() {
 
   return (
     <Page>
-      <div className="px-2 pt-2 md:mx-auto md:max-w-3xl md:px-5 md:pt-4">
-        <h1 className="px-2 text-[18px] font-black">Transactions</h1>
+      <div className="px-3 pt-4 md:mx-auto md:max-w-3xl">
+        <h1 className="text-[26px] font-black text-[var(--text-bright)]">History</h1>
+        <p className="mt-1 text-[13px] text-[var(--text-muted)]">Deposits and withdrawals on this account.</p>
 
-        <div className="mt-3 flex gap-1.5 px-2">
+        <div className="mt-3 flex gap-1.5">
           {[
             { key: "all", label: "All" },
             { key: "deposit", label: "Deposits" },
@@ -62,11 +63,11 @@ export default function TransactionsPage() {
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className="rounded px-3 py-1.5 text-[12px] font-bold"
+              className="rounded-full px-3 py-1.5 text-[12px] font-bold"
               style={
                 filter === f.key
-                  ? { background: "var(--accent)", color: "var(--accent-ink)" }
-                  : { background: "var(--surface)", color: "var(--text-muted)" }
+                  ? { background: "var(--accent)", color: "#fff" }
+                  : { background: "#fff", color: "var(--text-muted)", boxShadow: "0 1px 2px rgba(17,24,39,0.06)" }
               }
             >
               {f.label}
@@ -75,27 +76,27 @@ export default function TransactionsPage() {
         </div>
 
         {txns === null ? (
-          <div className="mt-3 space-y-2 px-2">
+          <div className="mt-3 space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-16 rounded bg-[var(--bg-elevated)] opacity-60" />
+              <div key={i} className="h-16 rounded-2xl bg-white opacity-70" />
             ))}
           </div>
         ) : !shown.length ? (
-          <p className="mt-3 rounded bg-[var(--bg-elevated)] p-10 text-center text-[13px] text-[var(--text-muted)]">
+          <p className="mt-3 rounded-2xl bg-white p-10 text-center text-[13px] text-[var(--text-muted)] shadow-sm">
             Nothing here yet.
           </p>
         ) : (
-          <ul className="mt-3 overflow-hidden rounded bg-[var(--bg-elevated)]">
+          <ul className="mt-3 space-y-2">
             {shown.map((t) => {
               const out = t.metadata?.type === "withdrawal";
               const isPartner = t.metadata?.type === "partner_credit";
               return (
                 <li
                   key={t.reference}
-                  className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3 last:border-0"
+                  className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm"
                 >
                   <span
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)]"
                     style={{ color: out ? "var(--lose)" : "var(--win)" }}
                   >
                     {isPartner ? (

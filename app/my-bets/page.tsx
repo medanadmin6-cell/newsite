@@ -89,7 +89,7 @@ export default function MyBetsPage() {
   return (
     <Page>
       <div className="px-3 pb-6 pt-3">
-        <h1 className="text-[22px] font-black text-[var(--text-bright)]">My bets</h1>
+        <h1 className="text-[26px] font-black text-[var(--text-bright)]">My bets</h1>
         <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
           {tickets ? "Your tickets, settled on this account" : "Loading your tickets"}
         </p>

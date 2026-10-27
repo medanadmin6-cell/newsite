@@ -356,7 +356,7 @@ function SubmitButton({ disabled, label }: { disabled: boolean; label: string })
     <button
       type="submit"
       disabled={disabled}
-      className="w-full rounded-[4px] py-3.5 text-[16px] font-bold transition-colors"
+      className="w-full rounded-full py-3.5 text-[16px] font-black transition-colors"
       style={
         disabled
           ? { background: "var(--surface-2)", color: "var(--text-muted)" }
@@ -372,8 +372,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <header className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3.5">
-        <button onClick={() => router.back()} aria-label="Back">
+      <header className="flex items-center gap-3 bg-[#0f1c33] px-4 py-3.5 text-white">
+        <button onClick={() => router.back()} aria-label="Back" className="text-white">
           <ArrowLeft size={20} strokeWidth={2} />
         </button>
         <span className="flex items-center gap-1.5 text-[15px] font-bold">

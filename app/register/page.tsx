@@ -61,7 +61,10 @@ function RegisterForm() {
       <div className="mx-auto w-full max-w-[455px] px-6 pb-16 pt-5">
         <CountryBar country={country} onChange={setCountryCode} onClose={() => router.push("/")} />
 
-        <form onSubmit={submit} className="mt-8 space-y-4">
+        <h1 className="mt-8 text-[28px] font-black leading-none text-[var(--text-bright)]">Create account</h1>
+        <p className="mt-2 text-[13px] text-[var(--text-muted)]">A phone number and a password. That is the whole account.</p>
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
           <PhoneField country={country} value={phone} onChange={setPhone} autoFocus />
 
           <ShellInput
@@ -111,14 +114,14 @@ function RegisterForm() {
           </div>
 
           {error && (
-            <p className="rounded-[3px] bg-[var(--lose-bg)] px-3 py-2.5 text-[13px] text-[var(--lose)]">
+            <p className="rounded-2xl bg-[var(--lose-bg)] px-3 py-2.5 text-[13px] text-[var(--lose)]">
               {error}
             </p>
           )}
 
           <div className="pt-2">
             <PrimaryButton type="submit" disabled={busy}>
-              {busy ? "Creating…" : "Register"}
+              {busy ? "Creating…" : "Create account"}
             </PrimaryButton>
           </div>
         </form>
@@ -147,13 +150,13 @@ function ShellInput({
   autoComplete?: string;
 }) {
   return (
-    <div className="rounded-[3px] bg-[var(--field)] px-3 py-2 ring-1 ring-[var(--field-line)]">
+    <div className="rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-[var(--line)]">
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete={autoComplete}
-        className="w-full rounded-[2px] bg-[var(--input)] px-2 py-2 text-[15px] text-[var(--input-ink)] outline-none placeholder:text-[var(--input-placeholder)] focus:ring-1 focus:ring-[var(--accent)]"
+        className="w-full rounded-xl bg-[var(--surface-2)] px-2 py-2.5 text-[15px] text-[var(--input-ink)] outline-none placeholder:text-[var(--input-placeholder)] focus:ring-2 focus:ring-[var(--accent)]"
       />
     </div>
   );

@@ -25,11 +25,12 @@ export default function ForgotPasswordPage() {
       <div className="mx-auto w-full max-w-[455px] px-6 pb-16 pt-5">
         <CountryBar country={country} onChange={setCountryCode} onClose={() => router.push("/login")} />
 
-        <h1 className="mt-8 text-[18px] font-medium">Reset your password</h1>
+        <h1 className="mt-8 text-[28px] font-black leading-none text-[var(--text-bright)]">Reset password</h1>
+        <p className="mt-2 text-[13px] text-[var(--text-muted)]">We check the number with you, then set a new one.</p>
 
         {sent ? (
           <div className="mt-6 space-y-4">
-            <p className="rounded-[3px] bg-[var(--field)] px-4 py-3.5 text-[14px] leading-relaxed text-[var(--text-muted)] ring-1 ring-[var(--field-line)]">
+            <p className="rounded-2xl bg-white px-4 py-3.5 text-[14px] leading-relaxed text-[var(--text-muted)] shadow-sm">
               Our team will verify your number and reset the password for you. This is handled by a
               person, so it is not instant.
             </p>
@@ -38,7 +39,7 @@ export default function ForgotPasswordPage() {
                 href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-[3px] bg-[var(--accent)] py-3.5 text-center text-[16px] font-medium text-[var(--accent-ink)]"
+                className="block rounded-full bg-[var(--accent)] py-3.5 text-center text-[16px] font-black text-white"
               >
                 Message support on WhatsApp
               </a>

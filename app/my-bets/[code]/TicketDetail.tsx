@@ -276,7 +276,7 @@ export function TicketDetail({ code }: { code: string }) {
       <Header onBack={() => router.back()} />
 
       {/* Summary */}
-      <section className="bg-[var(--surface)] px-4 pb-5 pt-3">
+      <section className="mx-3 mt-3 rounded-3xl bg-white px-4 pb-5 pt-4 shadow-sm">
         <div className="mx-auto flex max-w-2xl items-center gap-2 text-[12px] text-[var(--text-muted)]">
           <span>
             {new Date(bet.created_at).toLocaleString("en-GB", {
@@ -342,7 +342,7 @@ export function TicketDetail({ code }: { code: string }) {
 
         {/* Congratulations, on a won ticket only. */}
         {won && (
-          <div className="mx-auto mt-4 flex max-w-2xl items-center gap-3 rounded-[6px] bg-[var(--bg-elevated)] px-3 py-2.5">
+          <div className="mx-auto mt-4 flex max-w-2xl items-center gap-3 rounded-2xl bg-[#ecfdf3] px-3 py-2.5">
             <Confetti />
             <span className="min-w-0 flex-1">
               <span className="block text-[15px] font-black leading-tight text-[var(--text-bright)]">
@@ -354,7 +354,7 @@ export function TicketDetail({ code }: { code: string }) {
             </span>
             <button
               onClick={showOff}
-              className="flex shrink-0 items-center gap-1.5 rounded-[4px] bg-[var(--accent)] px-4 py-2.5 text-[13px] font-black text-[var(--accent-ink)]"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2.5 text-[13px] font-black text-white"
             >
               {shared ? <Check size={14} strokeWidth={2.6} /> : <Share2 size={14} strokeWidth={2.2} />}
               {shared ? "Copied" : "Show Off"}
@@ -486,12 +486,12 @@ function Confetti() {
 
 function Header({ onBack }: { onBack: () => void }) {
   return (
-    <header className="sticky top-0 z-40 bg-[var(--surface)]">
-      <div className="mx-auto flex h-[48px] max-w-2xl items-center gap-3 px-4">
-        <button onClick={onBack} aria-label="Back" className="text-[var(--text-bright)]">
+    <header className="sticky top-0 z-40 bg-[#0f1c33]">
+      <div className="mx-auto flex h-[52px] max-w-2xl items-center gap-3 px-4">
+        <button onClick={onBack} aria-label="Back" className="text-white">
           <ArrowLeft size={22} strokeWidth={2} />
         </button>
-        <h1 className="flex-1 text-[17px] font-bold text-[var(--text-bright)]">Bet details</h1>
+        <h1 className="flex-1 text-[17px] font-black text-white">Bet details</h1>
       </div>
     </header>
   );
@@ -538,7 +538,7 @@ function LegCard({ leg }: { leg: Leg }) {
       : null;
 
   return (
-    <article className="flex overflow-hidden rounded-[6px] bg-[var(--bg-elevated)]">
+    <article className="flex overflow-hidden rounded-2xl bg-white shadow-sm">
       {/* Status mark: a settled leg says at a glance whether it landed. */}
       <div
         className="flex w-9 shrink-0 items-start justify-center pt-3"
