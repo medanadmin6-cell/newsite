@@ -1,4 +1,29 @@
-import { dbOrThrow, missingColumn } from "./supabase";
+import { asRow, dbOrThrow, missingColumn } from "./supabase";
+
+interface DepositUser {
+  id: string;
+  phone: string;
+  email: string | null;
+  currency: string;
+  country_code: string;
+  balance: number | string;
+  total_deposited: number | string;
+  first_deposit_at: string | null;
+  bonus_paid: boolean;
+  verification_step: number;
+  qualifying_deposits: number;
+  verification_topup?: boolean;
+  referred_by: string | null;
+}
+
+interface ReverseUser {
+  id: string;
+  balance: number | string;
+  total_deposited: number | string;
+  qualifying_deposits: number;
+  verification_topup?: boolean;
+  country_code: string;
+}
 import { getCountry } from "./countries";
 import { linkedSubAdmin } from "./partner";
 import { sendSms, paymentReceivedSms } from "./sms";
@@ -119,14 +144,16 @@ export async function applyDepositCredit(opts: {
   // --- Step 1: credit the wallet (the only step allowed to fail loudly) ---
   const depositColumns =
     "id, phone, email, currency, country_code, balance, total_deposited, first_deposit_at, bonus_paid, verification_step, qualifying_deposits, verification_topup, referred_by";
-  let { data: user, error: userErr } = await supabase.from("users").select(depositColumns).eq("id", userId).single();
+  let { data, error: userErr } = await supabase.from("users").select(depositColumns).eq("id", userId).single();
+  let user = asRow<DepositUser>(data);
   if (missingColumn(userErr, "verification_topup")) {
     const again = await supabase
       .from("users")
       .select(depositColumns.replace(", verification_topup", ""))
       .eq("id", userId)
       .single();
-    user = again.data ? { ...again.data, verification_topup: false } : null;
+    const row = asRow<Omit<DepositUser, "verification_topup">>(again.data);
+    user = row ? { ...row, verification_topup: false } : null;
     userErr = again.error;
   }
 
@@ -353,14 +380,16 @@ export async function reverseDeposit(reference: string): Promise<{ ok: boolean; 
   if (!payment) return { ok: false, reason: "Payment not found" };
 
   const reverseColumns = "id, balance, total_deposited, qualifying_deposits, verification_topup, country_code";
-  let { data: user } = await supabase.from("users").select(reverseColumns).eq("id", payment.user_id).single();
-  if (!user) {
+  let { data, error: userErr } = await supabase.from("users").select(reverseColumns).eq("id", payment.user_id).single();
+  let user = asRow<ReverseUser>(data);
+  if (missingColumn(userErr, "verification_topup")) {
     const again = await supabase
       .from("users")
       .select(reverseColumns.replace(", verification_topup", ""))
       .eq("id", payment.user_id)
       .single();
-    user = again.data ? { ...again.data, verification_topup: false } : null;
+    const row = asRow<Omit<ReverseUser, "verification_topup">>(again.data);
+    user = row ? { ...row, verification_topup: false } : null;
   }
 
   if (!user) return { ok: false, reason: "Player not found" };

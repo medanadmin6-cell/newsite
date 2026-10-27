@@ -28,6 +28,20 @@ export function db(): SupabaseClient | null {
   return cached;
 }
 
+/**
+ * A column list built as a string is untyped. These name the row the caller
+ * asked for, so a missing-column retry can still add a field to it.
+ */
+export function asRow<T extends object>(data: unknown): T | null {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  return data as T;
+}
+
+export function asRows<T extends object>(data: unknown): T[] {
+  if (!Array.isArray(data)) return [];
+  return data.filter((row) => row && typeof row === "object") as T[];
+}
+
 /** True when a query names a column this database has not added yet. */
 export function missingColumn(
   error: { code?: string; message?: string } | null | undefined,

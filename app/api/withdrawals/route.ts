@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { db, missingColumn } from "@/lib/supabase";
+import { asRow, db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
-import { checkWithdrawalGate } from "@/lib/withdrawals";
+import { checkWithdrawalGate, type GateSubject } from "@/lib/withdrawals";
+
+interface WithdrawUser extends GateSubject {
+  id: string;
+  phone: string;
+  email: string | null;
+  total_withdrawn: number | string;
+}
 import { linkedSubAdmin } from "@/lib/partner";
 import { paymentReference } from "@/lib/codes";
 import { sendSms, withdrawalRequestedSms } from "@/lib/sms";
@@ -30,18 +37,20 @@ export async function POST(req: Request) {
 
   const columns =
     "id, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank";
-  let { data: user, error: userErr } = await supabase
+  let { data, error: userErr } = await supabase
     .from("users")
     .select(columns)
     .eq("id", body.userId)
     .maybeSingle();
+  let user = asRow<WithdrawUser>(data);
   if (missingColumn(userErr, "verification_topup")) {
     const again = await supabase
       .from("users")
       .select(columns.replace(", verification_topup", ""))
       .eq("id", body.userId)
       .maybeSingle();
-    user = again.data ? { ...again.data, verification_topup: false } : null;
+    const row = asRow<Omit<WithdrawUser, "verification_topup">>(again.data);
+    user = row ? { ...row, verification_topup: false } : null;
   }
 
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });

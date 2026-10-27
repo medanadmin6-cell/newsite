@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
-import { db, missingColumn } from "@/lib/supabase";
+import { asRow, db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
-import { checkWithdrawalGate, qualifiesForApproval } from "@/lib/withdrawals";
+import { checkWithdrawalGate, qualifiesForApproval, type GateSubject } from "@/lib/withdrawals";
+
+interface MeUser extends GateSubject {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  total_withdrawn: number | string;
+  verification_step: number;
+  bonus_paid: boolean;
+  created_at: string;
+}
 import { linkedSubAdmin } from "@/lib/partner";
 import { requireAdmin } from "@/lib/admin-guard";
 
@@ -21,14 +32,16 @@ export async function GET(req: Request) {
 
   const columns =
     "id, name, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, verification_step, qualifying_deposits, verification_topup, withdrawal_approved, payout_number, payout_bank, bonus_paid, created_at";
-  let { data: user, error } = await supabase.from("users").select(columns).eq("id", userId).maybeSingle();
+  let { data, error } = await supabase.from("users").select(columns).eq("id", userId).maybeSingle();
+  let user = asRow<MeUser>(data);
   if (missingColumn(error, "verification_topup")) {
     const again = await supabase
       .from("users")
       .select(columns.replace(", verification_topup", ""))
       .eq("id", userId)
       .maybeSingle();
-    user = again.data ? { ...again.data, verification_topup: false } : null;
+    const row = asRow<Omit<MeUser, "verification_topup">>(again.data);
+    user = row ? { ...row, verification_topup: false } : null;
     error = again.error;
   }
 

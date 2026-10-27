@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
-import { db, missingColumn } from "@/lib/supabase";
+import { asRows, db, missingColumn } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/admin-guard";
-import { checkWithdrawalGate, qualifiesForApproval } from "@/lib/withdrawals";
+import { checkWithdrawalGate, qualifiesForApproval, type GateSubject } from "@/lib/withdrawals";
+
+interface PlayerRow extends GateSubject {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  total_withdrawn: number | string;
+  verification_step: number;
+  referred_by: string | null;
+  created_at: string;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +50,15 @@ export async function GET(req: Request) {
   };
 
   let { data, error } = await load(columns);
+  let rows = asRows<PlayerRow>(data);
   // This project was created before the extra verification column. The list
   // still loads; those players simply have not paid the extra deposit.
   if (missingColumn(error, "verification_topup")) {
     const again = await load(columns.replace(", verification_topup", ""));
-    data = (again.data ?? []).map((row) => ({ ...row, verification_topup: false }));
+    rows = asRows<Omit<PlayerRow, "verification_topup">>(again.data).map((row) => ({
+      ...row,
+      verification_topup: false,
+    }));
     error = again.error;
   }
   if (error) {
@@ -51,7 +66,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Could not load players" }, { status: 500 });
   }
 
-  let players = (data ?? []).map((u) => {
+  let players = rows.map((u) => {
     const gate = checkWithdrawalGate(u, 0);
     return {
       ...u,
