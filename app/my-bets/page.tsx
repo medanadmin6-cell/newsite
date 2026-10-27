@@ -34,12 +34,12 @@ interface Ticket {
   selections: Leg[];
 }
 
-const STATUS_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
-  pending: { bg: "var(--pending)", fg: "#3f2d03", label: "Open" },
-  won: { bg: "var(--win)", fg: "#23310c", label: "Won" },
-  lost: { bg: "var(--lose)", fg: "#ffffff", label: "Lost" },
-  cashed_out: { bg: "var(--pending)", fg: "#3f2d03", label: "Cashed out" },
-  void: { bg: "var(--surface-2)", fg: "var(--text)", label: "Void" },
+const STATUS_STYLE: Record<string, { bg: string; fg: string; label: string; rail: string }> = {
+  pending: { bg: "var(--accent-soft)", fg: "var(--accent-dim)", label: "Open", rail: "var(--accent)" },
+  won: { bg: "#ecfdf3", fg: "var(--win-2)", label: "Won", rail: "var(--win)" },
+  lost: { bg: "var(--lose-bg)", fg: "var(--lose)", label: "Lost", rail: "var(--lose)" },
+  cashed_out: { bg: "#fff7e6", fg: "#9a6700", label: "Cashed out", rail: "var(--pending)" },
+  void: { bg: "var(--surface-2)", fg: "var(--text-muted)", label: "Void", rail: "var(--line)" },
 };
 
 export default function MyBetsPage() {
@@ -87,14 +87,17 @@ export default function MyBetsPage() {
   const staked = tickets?.reduce((sum, t) => sum + Number(t.stake), 0) ?? 0;
 
   return (
-    <Page tone="night">
-      <div className="min-h-[70vh] px-3 pb-6 pt-3 text-white">
-        <div>
-          <p className="text-[11px] font-black tracking-[0.16em] text-[#f5a524]">TICKETS</p>
-          <h1 className="text-[22px] font-black">My bets</h1>
-          <p className="mt-0.5 text-[12px] text-white/50">
-            {tickets ? `${openCount} open · ${wonCount} won · ${formatMoney(staked, player.currency)} staked` : "Loading your tickets"}
-          </p>
+    <Page>
+      <div className="px-3 pb-6 pt-3">
+        <h1 className="text-[22px] font-black text-[var(--text-bright)]">My bets</h1>
+        <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
+          {tickets ? "Your tickets, settled on this account" : "Loading your tickets"}
+        </p>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <Stat label="Open" value={tickets ? String(openCount) : "—"} tone="blue" />
+          <Stat label="Won" value={tickets ? String(wonCount) : "—"} tone="green" />
+          <Stat label="Staked" value={tickets ? formatMoney(staked, player.currency) : "—"} tone="gold" />
         </div>
 
         <div className="scroll-x mt-3 flex gap-1.5">
@@ -105,8 +108,8 @@ export default function MyBetsPage() {
               className="shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold capitalize"
               style={
                 filter === f
-                  ? { background: "#f5a524", color: "#1a1203" }
-                  : { background: "#1c2330", color: "rgba(255,255,255,0.7)" }
+                  ? { background: "var(--accent)", color: "#fff" }
+                  : { background: "#fff", color: "var(--text-muted)", boxShadow: "0 1px 2px rgba(17,24,39,0.06)" }
               }
             >
               {f === "pending" ? "Open" : f === "cashed_out" ? "Cashed out" : f}
@@ -115,13 +118,13 @@ export default function MyBetsPage() {
         </div>
 
         {shown === null ? (
-          <div className="space-y-2">
+          <div className="mt-3 space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-28 rounded bg-[var(--bg-elevated)] opacity-60" />
+              <div key={i} className="h-28 rounded-2xl bg-white opacity-70" />
             ))}
           </div>
         ) : shown.length === 0 ? (
-          <p className="rounded-2xl bg-[#1c2330] p-10 text-center text-[13px] text-white/60">
+          <p className="mt-3 rounded-2xl bg-white p-10 text-center text-[13px] text-[var(--text-muted)] shadow-sm">
             No tickets here yet.
           </p>
         ) : (
@@ -174,20 +177,30 @@ function CardShell({
   );
 }
 
+function Stat({ label, value, tone }: { label: string; value: string; tone: "blue" | "green" | "gold" }) {
+  const ink = tone === "blue" ? "var(--accent)" : tone === "green" ? "var(--win)" : "var(--price)";
+  const wash = tone === "blue" ? "var(--accent-soft)" : tone === "green" ? "#ecfdf3" : "#fff7e6";
+  return (
+    <div className="rounded-2xl px-3 py-2.5" style={{ background: wash }}>
+      <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: ink }}>
+        {label}
+      </p>
+      <p className="mt-0.5 truncate text-[14px] font-black text-[var(--text-bright)]">{value}</p>
+    </div>
+  );
+}
+
 function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: Ticket) => void }) {
   const [open, setOpen] = useState(false);
   const style = STATUS_STYLE[ticket.status] ?? STATUS_STYLE.pending;
-  const rail =
-    ticket.status === "won" ? "var(--win)" : ticket.status === "lost" ? "var(--lose)" : "var(--accent)";
 
   return (
-    <article className="mt-3 flex overflow-hidden rounded-2xl bg-[#f6f1e7] text-[#1a1203]">
-      <div className="w-1.5 shrink-0" style={{ background: rail }} />
-      <div className="min-w-0 flex-1">
+    <article className="mt-3 overflow-hidden rounded-2xl bg-white text-[var(--text)] shadow-sm">
+      <div className="h-1" style={{ background: style.rail }} />
       <CardShell ticket={ticket} onCelebrate={onCelebrate}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="font-mono text-[13px] font-black tracking-wider">{ticket.code}</p>
+            <p className="font-mono text-[13px] font-black tracking-wider text-[var(--accent-dim)]">{ticket.code}</p>
             <p className="truncate text-[12px] font-semibold text-[var(--text-muted)]">
               {ticket.selections[0]
                 ? `${ticket.selections[0].home_team} v ${ticket.selections[0].away_team}`
@@ -203,20 +216,20 @@ function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: 
           </span>
         </div>
 
-        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-dashed border-[var(--line)] pt-2 text-[12px]">
-          <div>
+        <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
+          <div className="rounded-xl bg-[var(--surface-2)] px-2 py-1.5">
             <dt className="text-[10px] text-[var(--text-faint)]">Stake</dt>
             <dd className="font-bold">{formatMoney(Number(ticket.stake), ticket.currency)}</dd>
           </div>
-          <div>
+          <div className="rounded-xl bg-[#fff7e6] px-2 py-1.5">
             <dt className="text-[10px] text-[var(--text-faint)]">Odds</dt>
             <dd className="font-bold text-[var(--price)]">{Number(ticket.total_odds).toFixed(2)}</dd>
           </div>
-          <div>
+          <div className="rounded-xl px-2 py-1.5" style={{ background: style.bg }}>
             <dt className="text-[10px] text-[var(--text-faint)]">
               {ticket.status === "won" ? "Paid" : "Return"}
             </dt>
-            <dd className="font-bold">
+            <dd className="font-bold" style={{ color: style.fg }}>
               {formatMoney(Number(ticket.payout ?? ticket.potential_win), ticket.currency)}
             </dd>
           </div>
@@ -225,7 +238,7 @@ function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: 
 
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full border-t border-[var(--line)] py-2 text-[11px] font-semibold text-[var(--text-muted)]"
+        className="w-full border-t border-[var(--line)] py-2 text-[11px] font-semibold text-[var(--accent)]"
       >
         {open ? "Hide legs" : `Show ${ticket.selections.length} leg${ticket.selections.length === 1 ? "" : "s"}`}
       </button>
@@ -258,12 +271,11 @@ function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: 
                   )}
                 </p>
               </div>
-              <span className="text-[12px] font-bold">{Number(leg.odds).toFixed(2)}</span>
+              <span className="text-[12px] font-bold text-[var(--price)]">{Number(leg.odds).toFixed(2)}</span>
             </li>
           ))}
         </ul>
       )}
-      </div>
     </article>
   );
 }
