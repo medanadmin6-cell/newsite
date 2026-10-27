@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
-import { getCountry } from "@/lib/countries";
+import { getCountry, formatMoney } from "@/lib/countries";
+import { depositsInCedis, ghsPerUsd, ghsToUsd, MIN_WALLET_DEPOSIT, usdToGhs } from "@/lib/fx";
 import { paymentReference } from "@/lib/codes";
 
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
@@ -44,21 +45,27 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 
   const country = getCountry(user.country_code);
-  if (!user.first_deposit_at && amount < country.minFirstDeposit) {
+  const cedis = depositsInCedis(user.country_code);
+  const rate = ghsPerUsd();
+  const charge = cedis ? usdToGhs(amount, rate) : amount;
+  const chargeCurrency = cedis ? "GHS" : user.currency;
+  const minWallet = cedis ? MIN_WALLET_DEPOSIT : country.minDeposit;
+  const maxWallet = cedis ? ghsToUsd(country.maxDeposit, rate) : country.maxDeposit;
+  if (!user.first_deposit_at && amount < (cedis ? MIN_WALLET_DEPOSIT : country.minFirstDeposit)) {
     return NextResponse.json(
-      { error: `Minimum first deposit is ${country.currencySymbol}${country.minFirstDeposit}` },
+      { error: `Minimum first deposit is ${cedis ? formatMoney(MIN_WALLET_DEPOSIT, "USD") : `${country.currencySymbol}${country.minFirstDeposit}`}` },
       { status: 400 },
     );
   }
-  if (amount < country.minDeposit) {
+  if (amount < minWallet) {
     return NextResponse.json(
-      { error: `The smallest deposit is ${country.currencySymbol}${country.minDeposit}` },
+      { error: `The smallest deposit is ${cedis ? formatMoney(MIN_WALLET_DEPOSIT, "USD") : `${country.currencySymbol}${country.minDeposit}`}` },
       { status: 400 },
     );
   }
-  if (amount > country.maxDeposit) {
+  if (amount > maxWallet) {
     return NextResponse.json(
-      { error: `The largest single deposit is ${country.currencySymbol}${country.maxDeposit}` },
+      { error: `The largest single deposit is ${cedis ? formatMoney(maxWallet, "USD") : `${country.currencySymbol}${country.maxDeposit}`}` },
       { status: 400 },
     );
   }
@@ -93,8 +100,8 @@ export async function POST(req: Request) {
   const { error } = await supabase.from("payments").insert({
     reference,
     user_id: user.id,
-    amount,
-    currency: user.currency,
+    amount: charge,
+    currency: chargeCurrency,
     provider: "manual",
     status: "pending",
     metadata: {
@@ -102,6 +109,7 @@ export async function POST(req: Request) {
       gateway: "manual",
       sender_number: senderNumber || user.phone,
       screenshot: screenshotPath,
+      ...(cedis ? { walletAmount: amount, walletCurrency: "USD", quotedGhs: charge, fxRate: rate } : {}),
     },
   });
 

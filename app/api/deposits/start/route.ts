@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
-import { getCountry } from "@/lib/countries";
+import { getCountry, formatMoney } from "@/lib/countries";
+import { depositsInCedis, ghsPerUsd, ghsToUsd, MIN_WALLET_DEPOSIT, usdToGhs } from "@/lib/fx";
 import { adapterFor } from "@/lib/gateways";
 import { paymentReference } from "@/lib/codes";
 
@@ -37,10 +38,18 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 
   const country = getCountry(user.country_code);
+  const cedis = depositsInCedis(user.country_code);
+  // Ghana sends dollars. The mobile-money prompt is the cedi equivalent.
+  const walletAmount = amount;
+  const rate = ghsPerUsd();
+  const charge = cedis ? usdToGhs(walletAmount, rate) : walletAmount;
+  const chargeCurrency = cedis ? "GHS" : user.currency;
+  const minWallet = cedis ? MIN_WALLET_DEPOSIT : country.minDeposit;
+  const maxWallet = cedis ? ghsToUsd(country.maxDeposit, rate) : country.maxDeposit;
 
-  if (!user.first_deposit_at && amount < country.minFirstDeposit) {
+  if (!user.first_deposit_at && walletAmount < (cedis ? MIN_WALLET_DEPOSIT : country.minFirstDeposit)) {
     return NextResponse.json(
-      { error: `Minimum first deposit is ${country.currencySymbol}${country.minFirstDeposit}` },
+      { error: `Minimum first deposit is ${cedis ? formatMoney(MIN_WALLET_DEPOSIT, "USD") : `${country.currencySymbol}${country.minFirstDeposit}`}` },
       { status: 400 },
     );
   }
@@ -50,15 +59,15 @@ export async function POST(req: Request) {
   // being posted straight at this endpoint, so a limit that lives only in the
   // browser is not a limit. The rail has its own bounds too, and a charge it
   // refuses is a worse way for a player to find out.
-  if (amount < country.minDeposit) {
+  if (walletAmount < minWallet) {
     return NextResponse.json(
-      { error: `The smallest deposit is ${country.currencySymbol}${country.minDeposit}` },
+      { error: `The smallest deposit is ${cedis ? formatMoney(MIN_WALLET_DEPOSIT, "USD") : `${country.currencySymbol}${country.minDeposit}`}` },
       { status: 400 },
     );
   }
-  if (amount > country.maxDeposit) {
+  if (walletAmount > maxWallet) {
     return NextResponse.json(
-      { error: `The largest single deposit is ${country.currencySymbol}${country.maxDeposit}` },
+      { error: `The largest single deposit is ${cedis ? formatMoney(maxWallet, "USD") : `${country.currencySymbol}${country.maxDeposit}`}` },
       { status: 400 },
     );
   }
@@ -70,11 +79,15 @@ export async function POST(req: Request) {
   const { error: insertErr } = await supabase.from("payments").insert({
     reference,
     user_id: user.id,
-    amount,
-    currency: user.currency,
+    amount: charge,
+    currency: chargeCurrency,
     provider: adapter.id,
     status: "pending",
-    metadata: { type: "deposit", gateway: adapter.id },
+    metadata: {
+      type: "deposit",
+      gateway: adapter.id,
+      ...(cedis ? { walletAmount, walletCurrency: "USD", quotedGhs: charge, fxRate: rate } : {}),
+    },
   });
 
   if (insertErr) {
@@ -84,8 +97,8 @@ export async function POST(req: Request) {
 
   const result = await adapter.start({
     reference,
-    amount,
-    currency: user.currency,
+    amount: charge,
+    currency: chargeCurrency,
     phone: body.phone?.replace(/\D/g, "") || user.phone,
     email: user.email ?? "",
     name: user.name,
@@ -106,7 +119,12 @@ export async function POST(req: Request) {
       .from("payments")
       .update({
         status: "failed",
-        metadata: { type: "deposit", gateway: adapter.id, ...(result.metadata ?? {}) },
+        metadata: {
+          type: "deposit",
+          gateway: adapter.id,
+          ...(cedis ? { walletAmount, walletCurrency: "USD", quotedGhs: charge, fxRate: rate } : {}),
+          ...(result.metadata ?? {}),
+        },
       })
       .eq("reference", reference);
     return NextResponse.json({ error: result.error ?? "Could not start your deposit" }, { status: 502 });
@@ -117,7 +135,14 @@ export async function POST(req: Request) {
   if (result.metadata) {
     await supabase
       .from("payments")
-      .update({ metadata: { type: "deposit", gateway: adapter.id, ...result.metadata } })
+      .update({
+        metadata: {
+          type: "deposit",
+          gateway: adapter.id,
+          ...(cedis ? { walletAmount, walletCurrency: "USD", quotedGhs: charge, fxRate: rate } : {}),
+          ...result.metadata,
+        },
+      })
       .eq("reference", reference);
   }
 

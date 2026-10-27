@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney } from "@/lib/countries";
+import { depositsInCedis, usdToGhs } from "@/lib/fx";
 import { showWithdrawalIos } from "@/lib/withdrawal-ios";
 import { VerifyGate } from "@/components/VerifyGate";
 
@@ -30,6 +31,8 @@ export default function WithdrawPage() {
   const [rechecking, setRechecking] = useState(false);
 
   const country = getCountry(player?.country_code);
+  const cedis = depositsInCedis(player?.country_code);
+  const walletCurrency = cedis ? "USD" : (player?.currency ?? "USD");
 
   useEffect(() => {
     if (hydrated && !player) router.replace("/login");
@@ -155,7 +158,7 @@ export default function WithdrawPage() {
         {allowed === false && (
           <VerifyGate
             amount={progress?.amount ?? country.withdrawQualifyAmount}
-            currency={player.currency}
+            currency={walletCurrency}
             have={progress?.have ?? 0}
             need={progress?.need ?? country.withdrawQualifyCount}
             checking={rechecking}
@@ -173,7 +176,7 @@ export default function WithdrawPage() {
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <p className="text-[11px] uppercase tracking-wide text-[var(--text-faint)]">Available</p>
           <p className="text-[26px] font-black text-[var(--accent)]">
-            {formatMoney(Number(player.balance), player.currency)}
+            {formatMoney(Number(player.balance), walletCurrency)}
           </p>
           {progress && <p className="mt-1 text-[11px] text-[var(--text-muted)]">{progress.label}</p>}
         </div>
@@ -183,7 +186,7 @@ export default function WithdrawPage() {
         <form onSubmit={submit} className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
-              Amount ({country.currency})
+              Amount ({walletCurrency})
             </span>
             <input
               type="number"
@@ -193,6 +196,11 @@ export default function WithdrawPage() {
               onChange={(e) => setAmount(Number(e.target.value))}
               className="w-full rounded bg-[var(--surface-2)] px-3 py-3 text-[20px] font-black outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
+            {cedis && amount > 0 && (
+              <span className="mt-1 block text-[12px] font-medium normal-case tracking-normal text-[var(--text-muted)]">
+                Sent to your mobile money as {formatMoney(usdToGhs(amount), "GHS")}.
+              </span>
+            )}
           </label>
 
           <label className="block">

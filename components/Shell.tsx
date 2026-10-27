@@ -50,6 +50,7 @@ function HeaderActions({ onOpenAccount }: { onOpenAccount: () => void }) {
   const player = useSession((s) => s.player);
   const hydrated = useSession((s) => s.hydrated);
   const setBalance = useSession((s) => s.setBalance);
+  const setWallet = useSession((s) => s.setWallet);
   const setOpenBets = useSession((s) => s.setOpenBets);
 
   const playerId = player?.id;
@@ -77,7 +78,10 @@ function HeaderActions({ onOpenAccount }: { onOpenAccount: () => void }) {
         const json = await res.json();
         if (!alive) return;
         const current = useSession.getState().player?.balance;
-        if (json.user && current === before) setBalance(Number(json.user.balance));
+        if (json.user && current === before) {
+          if (typeof json.user.currency === "string") setWallet(Number(json.user.balance), json.user.currency);
+          else setBalance(Number(json.user.balance));
+        }
         if (typeof json.openBets === "number") setOpenBets(json.openBets);
       } catch {
         /* the header balance is not worth an error state */
@@ -89,7 +93,7 @@ function HeaderActions({ onOpenAccount }: { onOpenAccount: () => void }) {
       alive = false;
       clearInterval(timer);
     };
-  }, [playerId, setBalance, setOpenBets]);
+  }, [playerId, setBalance, setWallet, setOpenBets]);
 
   if (!hydrated) return <div className="h-7 w-24 rounded-full bg-[var(--surface-2)]" />;
 

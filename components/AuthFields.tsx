@@ -4,6 +4,11 @@ import { useState } from "react";
 import Image from "next/image";
 import { Eye, EyeOff, X, ChevronRight, Check as CheckGlyph } from "lucide-react";
 import { allCountries, type CountryConfig } from "@/lib/countries";
+import { depositsInCedis } from "@/lib/fx";
+
+function shownCurrency(country: CountryConfig): string {
+  return depositsInCedis(country.code) ? "USD" : country.currency;
+}
 
 /**
  * Auth form furniture. Country row, phone and password fields, and the
@@ -44,7 +49,7 @@ export function CountryBar({
         <div className="flex items-center gap-2">
           <Flag code={country.code} size={20} />
           <span className="text-[15px] font-medium text-[var(--text-bright)]">{country.name}</span>
-          <span className="text-[13px] font-bold text-[var(--text-muted)]">{country.currency}</span>
+          <span className="text-[13px] font-bold text-[var(--text-muted)]">{shownCurrency(country)}</span>
           <button
             type="button"
             onClick={() => setPicking((p) => !p)}
@@ -82,7 +87,7 @@ export function CountryBar({
               >
                 <Flag code={c.code} />
                 <span className="flex-1">{c.name}</span>
-                <span className="text-[12px] text-[var(--text-muted)]">{c.currency} · +{c.dialCode}</span>
+                <span className="text-[12px] text-[var(--text-muted)]">{shownCurrency(c)} · +{c.dialCode}</span>
               </button>
             </li>
           ))}

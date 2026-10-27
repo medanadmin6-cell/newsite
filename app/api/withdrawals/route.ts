@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { asRow, db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
+import { depositsInCedis, ghsPerUsd, usdToGhs } from "@/lib/fx";
 import { checkWithdrawalGate, type GateSubject } from "@/lib/withdrawals";
 
 interface WithdrawUser extends GateSubject {
@@ -152,6 +153,9 @@ export async function POST(req: Request) {
           debited: true,
           payout_number: payoutNumber,
           payout_bank: payoutBank,
+          ...(depositsInCedis(user.country_code)
+            ? { payoutGhs: usdToGhs(amount), fxRate: ghsPerUsd() }
+            : {}),
         },
       });
 
@@ -215,6 +219,9 @@ export async function POST(req: Request) {
       rail: country.payoutRail,
       payout_number: payoutNumber,
       payout_bank: payoutBank,
+      ...(depositsInCedis(user.country_code)
+        ? { payoutGhs: usdToGhs(amount), fxRate: ghsPerUsd() }
+        : {}),
     },
   });
 

@@ -144,6 +144,8 @@ interface SessionState {
   signIn: (player: Player) => void;
   signOut: () => void;
   setBalance: (balance: number) => void;
+  /** Balance and currency together, after a cedi wallet is moved to dollars. */
+  setWallet: (balance: number, currency: string) => void;
   setOpenBets: (count: number) => void;
   /** Placing a slip bumps the badge now, rather than waiting on the next poll. */
   addOpenBets: (delta: number) => void;
@@ -162,6 +164,12 @@ export const useSession = create<SessionState>()(
         set((s) => {
           if (!s.player || s.player.balance === balance) return s;
           return { player: { ...s.player, balance } };
+        }),
+      setWallet: (balance, currency) =>
+        set((s) => {
+          if (!s.player) return s;
+          if (s.player.balance === balance && s.player.currency === currency) return s;
+          return { player: { ...s.player, balance, currency } };
         }),
       setOpenBets: (openBets) => set({ openBets }),
       addOpenBets: (delta) => set((s) => ({ openBets: Math.max(0, s.openBets + delta) })),

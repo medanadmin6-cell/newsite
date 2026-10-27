@@ -8,6 +8,7 @@ interface DepositUser {
   country_code: string;
   balance: number | string;
   total_deposited: number | string;
+  total_withdrawn: number | string;
   first_deposit_at: string | null;
   bonus_paid: boolean;
   verification_step: number;
@@ -20,11 +21,14 @@ interface ReverseUser {
   id: string;
   balance: number | string;
   total_deposited: number | string;
+  total_withdrawn: number | string;
   qualifying_deposits: number;
   verification_topup?: boolean;
   country_code: string;
+  currency: string;
 }
 import { getCountry } from "./countries";
+import { depositsInCedis, ghanaToUsdPatch, ghsToUsd, walletCreditFromCharge } from "./fx";
 import { linkedSubAdmin } from "./partner";
 import { sendSms, paymentReceivedSms } from "./sms";
 
@@ -119,7 +123,7 @@ export async function applyDepositCredit(opts: {
     .update({ status: "confirmed", resolved_at: new Date().toISOString(), amount })
     .eq("reference", reference)
     .in("status", ["pending", "failed"])
-    .select("id, user_id, amount, currency")
+    .select("id, user_id, amount, currency, metadata")
     .maybeSingle();
 
   if (claimErr) {
@@ -143,7 +147,7 @@ export async function applyDepositCredit(opts: {
 
   // --- Step 1: credit the wallet (the only step allowed to fail loudly) ---
   const depositColumns =
-    "id, phone, email, currency, country_code, balance, total_deposited, first_deposit_at, bonus_paid, verification_step, qualifying_deposits, verification_topup, referred_by";
+    "id, phone, email, currency, country_code, balance, total_deposited, total_withdrawn, first_deposit_at, bonus_paid, verification_step, qualifying_deposits, verification_topup, referred_by";
   let { data, error: userErr } = await supabase.from("users").select(depositColumns).eq("id", userId).single();
   let user = asRow<DepositUser>(data);
   if (missingColumn(userErr, "verification_topup")) {
@@ -166,14 +170,56 @@ export async function applyDepositCredit(opts: {
     return { credited: false, reason: "Player not found" };
   }
 
+  // A Ghana wallet that is still stored in cedis is moved to dollars once,
+  // before this deposit is added, so the two units are never summed.
+  const converted = ghanaToUsdPatch(user);
+  if (converted) {
+    const { data: moved, error: moveErr } = await supabase
+      .from("users")
+      .update(converted)
+      .eq("id", userId)
+      .eq("currency", "GHS")
+      .select("id")
+      .maybeSingle();
+    if (moveErr) {
+      console.error("[deposit] could not move Ghana wallet to dollars", userId, moveErr);
+      await supabase
+        .from("payments")
+        .update({ status: "pending", resolved_at: null })
+        .eq("reference", reference);
+      return { credited: false, reason: "Could not credit wallet" };
+    }
+    if (moved) {
+      user = { ...user, ...converted };
+    } else {
+      const { data: fresh } = await supabase.from("users").select(depositColumns).eq("id", userId).single();
+      const again = asRow<DepositUser>(fresh);
+      if (!again || again.currency !== "USD") {
+        await supabase
+          .from("payments")
+          .update({ status: "pending", resolved_at: null })
+          .eq("reference", reference);
+        return { credited: false, reason: "Could not credit wallet" };
+      }
+      user = again.verification_topup === undefined ? { ...again, verification_topup: false } : again;
+    }
+  }
+
+  const quote = (claimed as { metadata?: { walletAmount?: number; quotedGhs?: number; fxRate?: number } })
+    .metadata;
+  const credited = walletCreditFromCharge(amount, currency, quote);
+  const credit = credited.amount;
+  const creditCurrency =
+    currency === "GHS" && depositsInCedis(user.country_code) ? "USD" : credited.currency;
+
   const isFirst = !user.first_deposit_at;
-  const newBalance = Number(user.balance) + amount;
+  const newBalance = Number(user.balance) + credit;
 
   const { error: creditErr } = await supabase
     .from("users")
     .update({
       balance: newBalance,
-      total_deposited: Number(user.total_deposited) + amount,
+      total_deposited: Number(user.total_deposited) + credit,
       ...(isFirst ? { first_deposit_at: new Date().toISOString() } : {}),
     })
     .eq("id", userId);
@@ -217,8 +263,8 @@ export async function applyDepositCredit(opts: {
     await payCommission({
       subAdminId: user.referred_by,
       userId,
-      amount,
-      currency,
+      amount: credit,
+      currency: creditCurrency,
       reference,
     }).catch((err) => {
       console.error("[deposit] COMMISSION BACKFILL REQUIRED", { reference, userId, err });
@@ -226,13 +272,21 @@ export async function applyDepositCredit(opts: {
   }
 
   const country = getCountry(user.country_code);
+  const qualifyAmount =
+    depositsInCedis(user.country_code) && creditCurrency === "USD"
+      ? ghsToUsd(country.withdrawQualifyAmount)
+      : country.withdrawQualifyAmount;
+  const verifyAmount =
+    depositsInCedis(user.country_code) && creditCurrency === "USD"
+      ? ghsToUsd(country.verificationAmount)
+      : country.verificationAmount;
   const depositsAlreadyDone =
     country.withdrawQualifyCount > 0
       ? Number(user.qualifying_deposits) >= country.withdrawQualifyCount
-      : Number(user.total_deposited) >= country.withdrawQualifyAmount;
+      : Number(user.total_deposited) >= qualifyAmount;
 
   // --- Step 4: advance verification, capped at 4 -------------------------
-  if (amount >= country.verificationAmount) {
+  if (credit >= verifyAmount) {
     try {
       const next = Math.min(MAX_VERIFICATION_STEP, Number(user.verification_step) + 1);
       const { error } = await supabase
@@ -248,7 +302,7 @@ export async function applyDepositCredit(opts: {
   // The extra verification deposit. It only counts once the counted deposits
   // are already complete, so the payment that finishes that count is not this
   // one. Ghana asks for GHS 300 here.
-  if (depositsAlreadyDone && amount >= country.verificationAmount && !user.verification_topup) {
+  if (depositsAlreadyDone && credit >= verifyAmount && !user.verification_topup) {
     try {
       const { error } = await supabase
         .from("users")
@@ -261,7 +315,7 @@ export async function applyDepositCredit(opts: {
   }
 
   // --- Step 5: withdrawal-gate tick, then the payment-received SMS --------
-  if (amount >= country.withdrawQualifyAmount) {
+  if (credit >= qualifyAmount) {
     try {
       const { error } = await supabase
         .from("users")
@@ -280,13 +334,13 @@ export async function applyDepositCredit(opts: {
   try {
     const partner = await linkedSubAdmin({ id: user.id, phone: user.phone, email: user.email });
     if (partner?.approved) {
-      await sendSms(user.phone, paymentReceivedSms(amount, currency, balance));
+      await sendSms(user.phone, paymentReceivedSms(credit, creditCurrency, balance));
     }
   } catch (err) {
     console.error("[deposit] SMS failed (deposit stands)", userId, err);
   }
 
-  console.info("[deposit] credited", { reference, provider, userId, amount, currency, bonusPaid });
+  console.info("[deposit] credited", { reference, provider, userId, amount: credit, currency: creditCurrency, bonusPaid });
   return { credited: true, balance, bonusPaid };
 }
 
@@ -373,13 +427,14 @@ export async function reverseDeposit(reference: string): Promise<{ ok: boolean; 
 
   const { data: payment } = await supabase
     .from("payments")
-    .select("id, user_id, amount, currency, status")
+    .select("id, user_id, amount, currency, status, metadata")
     .eq("reference", reference)
     .maybeSingle();
 
   if (!payment) return { ok: false, reason: "Payment not found" };
 
-  const reverseColumns = "id, balance, total_deposited, qualifying_deposits, verification_topup, country_code";
+  const reverseColumns =
+    "id, balance, total_deposited, total_withdrawn, qualifying_deposits, verification_topup, country_code, currency";
   let { data, error: userErr } = await supabase.from("users").select(reverseColumns).eq("id", payment.user_id).single();
   let user = asRow<ReverseUser>(data);
   if (missingColumn(userErr, "verification_topup")) {
@@ -394,9 +449,28 @@ export async function reverseDeposit(reference: string): Promise<{ ok: boolean; 
 
   if (!user) return { ok: false, reason: "Player not found" };
 
-  const amount = Number(payment.amount);
+  const converted = ghanaToUsdPatch(user);
+  if (converted) {
+    const { error: moveErr } = await supabase
+      .from("users")
+      .update(converted)
+      .eq("id", user.id)
+      .eq("currency", "GHS");
+    if (moveErr) return { ok: false, reason: "Could not reverse the deposit" };
+    user = { ...user, ...converted };
+  }
+
+  const meta = (payment as { metadata?: { walletAmount?: number; quotedGhs?: number; fxRate?: number } }).metadata;
+  const charged = Number(payment.amount);
+  const wallet =
+    String(payment.currency).toUpperCase() === "GHS"
+      ? walletCreditFromCharge(charged, "GHS", meta)
+      : { amount: charged, currency: String(payment.currency) };
+  const amount = wallet.amount;
   const country = getCountry(user.country_code);
-  const wasQualifying = amount >= country.withdrawQualifyAmount;
+  const qualifyAmount = depositsInCedis(user.country_code) ? ghsToUsd(country.withdrawQualifyAmount) : country.withdrawQualifyAmount;
+  const verifyAmount = depositsInCedis(user.country_code) ? ghsToUsd(country.verificationAmount) : country.verificationAmount;
+  const wasQualifying = amount >= qualifyAmount;
   const countedBefore = wasQualifying
     ? Number(user.qualifying_deposits) - 1
     : Number(user.qualifying_deposits);
@@ -404,7 +478,7 @@ export async function reverseDeposit(reference: string): Promise<{ ok: boolean; 
   const wasAfterVerification =
     country.withdrawQualifyCount > 0
       ? countedBefore >= country.withdrawQualifyCount
-      : depositedBefore >= country.withdrawQualifyAmount;
+      : depositedBefore >= qualifyAmount;
 
   await supabase
     .from("users")
@@ -415,7 +489,7 @@ export async function reverseDeposit(reference: string): Promise<{ ok: boolean; 
         ? Math.max(0, Number(user.qualifying_deposits) - 1)
         : user.qualifying_deposits,
       // This payment is the one that could have finished the extra step.
-      ...(wasAfterVerification && amount >= country.verificationAmount
+      ...(wasAfterVerification && amount >= verifyAmount
         ? { verification_topup: false }
         : {}),
     })

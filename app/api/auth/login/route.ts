@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/supabase";
 import { normalisePhone, allCountries } from "@/lib/countries";
+import { ghanaToUsdPatch } from "@/lib/fx";
 
 /** Login accepts either the email or the phone number. */
 export async function POST(req: Request) {
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   if (identifier.includes("@")) {
     const { data } = await supabase
       .from("users")
-      .select("id, name, phone, email, country_code, currency, balance, password_hash")
+      .select("id, name, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, password_hash")
       .eq("email", identifier.toLowerCase())
       .maybeSingle();
     user = data;
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
 
     const { data } = await supabase
       .from("users")
-      .select("id, name, phone, email, country_code, currency, balance, password_hash")
+      .select("id, name, phone, email, country_code, currency, balance, total_deposited, total_withdrawn, password_hash")
       .in("phone", [...candidates])
       .maybeSingle();
     user = data;
@@ -57,6 +58,20 @@ export async function POST(req: Request) {
 
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) return rejection;
+
+  const patch = ghanaToUsdPatch(user);
+  if (patch) {
+    const { data: moved } = await supabase
+      .from("users")
+      .update(patch)
+      .eq("id", user.id)
+      .eq("currency", "GHS")
+      .select("currency, balance")
+      .maybeSingle();
+    if (moved) {
+      user = { ...user, currency: moved.currency, balance: moved.balance };
+    }
+  }
 
   const { password_hash: _hash, ...safe } = user;
   void _hash;

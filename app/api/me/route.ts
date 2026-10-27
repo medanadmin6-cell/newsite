@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { asRow, db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
+import { ghanaToUsdPatch, WALLET_CURRENCY } from "@/lib/fx";
 import { checkWithdrawalGate, qualifiesForApproval, type GateSubject } from "@/lib/withdrawals";
 
 interface MeUser extends GateSubject {
@@ -47,7 +48,20 @@ export async function GET(req: Request) {
 
   if (error || !user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const patch = ghanaToUsdPatch(user);
+  if (patch) {
+    const { data: moved } = await supabase
+      .from("users")
+      .update(patch)
+      .eq("id", user.id)
+      .eq("currency", "GHS")
+      .select("currency, balance, total_deposited, total_withdrawn")
+      .maybeSingle();
+    if (moved) user = { ...user, ...moved };
+  }
+
   const country = getCountry(user.country_code);
+  const walletCurrency = user.currency || (country.code === "GH" ? WALLET_CURRENCY : country.currency);
   const gate = checkWithdrawalGate(user, 0);
 
   // Tier points come from turnover, so they are summed off the stakes. The
@@ -81,8 +95,8 @@ export async function GET(req: Request) {
     country: {
       code: country.code,
       name: country.name,
-      currency: country.currency,
-      currencySymbol: country.currencySymbol,
+      currency: walletCurrency,
+      currencySymbol: walletCurrency === "USD" ? "$" : country.currencySymbol,
       minFirstDeposit: country.minFirstDeposit,
       gateway: country.gateway,
       payoutRail: country.payoutRail,

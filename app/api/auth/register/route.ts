@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/supabase";
 import { getCountry, normalisePhone, validateKyc } from "@/lib/countries";
+import { depositsInCedis, WALLET_CURRENCY } from "@/lib/fx";
 
 /**
  * Registration. The country decides everything downstream — wallet currency,
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
       email: email?.trim().toLowerCase() || null,
       password_hash: passwordHash,
       country_code: country.code,
-      currency: country.currency,
+      currency: depositsInCedis(country.code) ? WALLET_CURRENCY : country.currency,
       kyc_value: kycValue?.trim().toUpperCase() || null,
       referred_by: referredBy,
     })

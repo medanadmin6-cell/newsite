@@ -1,4 +1,5 @@
 import { getCountry, formatMoney } from "./countries";
+import { depositsInCedis, ghsToUsd } from "./fx";
 
 /**
  * The withdrawal gate.
@@ -59,11 +60,15 @@ export function checkWithdrawalGate(
   options: GateOptions = {},
 ): GateResult {
   const country = getCountry(user.country_code);
+  const inDollars = depositsInCedis(user.country_code) && user.currency === "USD";
+  const unit = inDollars ? "USD" : country.currency;
+  const qualifyAmount = inDollars ? ghsToUsd(country.withdrawQualifyAmount) : country.withdrawQualifyAmount;
+  const verifyAmount = inDollars ? ghsToUsd(country.verificationAmount) : country.verificationAmount;
   const useCount = country.withdrawQualifyCount > 0;
   const counted = Number(user.qualifying_deposits);
   const deposited = Number(user.total_deposited);
   const countNeed = country.withdrawQualifyCount;
-  const depositsDone = useCount ? counted >= countNeed : deposited >= country.withdrawQualifyAmount;
+  const depositsDone = useCount ? counted >= countNeed : deposited >= qualifyAmount;
   // The counted deposits come first. The verification amount (GHS 300 in
   // Ghana) is a further deposit, and only one made after the count is already
   // complete. Admin and approved sub-admin accounts skip this with the rest
@@ -73,28 +78,22 @@ export function checkWithdrawalGate(
   const progress = topUpDue
     ? {
         have: useCount ? countNeed : deposited,
-        need: useCount ? countNeed + 1 : deposited + country.verificationAmount,
-        amount: country.verificationAmount,
-        label: `One more deposit of ${formatMoney(country.verificationAmount, country.currency)}`,
+        need: useCount ? countNeed + 1 : deposited + verifyAmount,
+        amount: verifyAmount,
+        label: `One more deposit of ${formatMoney(verifyAmount, unit)}`,
       }
     : useCount
       ? {
           have: counted,
           need: countNeed,
-          amount: country.withdrawQualifyAmount,
-          label: `${counted}/${countNeed} deposits of ${formatMoney(
-            country.withdrawQualifyAmount,
-            country.currency,
-          )}+`,
+          amount: qualifyAmount,
+          label: `${counted}/${countNeed} deposits of ${formatMoney(qualifyAmount, unit)}+`,
         }
       : {
           have: deposited,
-          need: country.withdrawQualifyAmount,
-          amount: country.withdrawQualifyAmount,
-          label: `${formatMoney(deposited, country.currency)} of ${formatMoney(
-            country.withdrawQualifyAmount,
-            country.currency,
-          )} deposited`,
+          need: qualifyAmount,
+          amount: qualifyAmount,
+          label: `${formatMoney(deposited, unit)} of ${formatMoney(qualifyAmount, unit)} deposited`,
         };
 
   // --- Gate 1: payout details -------------------------------------------
@@ -129,20 +128,17 @@ export function checkWithdrawalGate(
         ok: false,
         failed: "deposits",
         message: `${remaining} more deposit${remaining === 1 ? "" : "s"} of ${formatMoney(
-          country.withdrawQualifyAmount,
-          country.currency,
+          qualifyAmount,
+          unit,
         )} or more needed to unlock withdrawals`,
         progress,
       };
     }
-  } else if (Number(user.total_deposited) < country.withdrawQualifyAmount) {
+  } else if (Number(user.total_deposited) < qualifyAmount) {
     return {
       ok: false,
       failed: "deposits",
-      message: `Deposit ${formatMoney(
-        country.withdrawQualifyAmount - Number(user.total_deposited),
-        country.currency,
-      )} more to unlock withdrawals`,
+      message: `Deposit ${formatMoney(qualifyAmount - Number(user.total_deposited), unit)} more to unlock withdrawals`,
       progress,
     };
   }
@@ -151,7 +147,7 @@ export function checkWithdrawalGate(
     return {
       ok: false,
       failed: "deposits",
-      message: `Deposit ${formatMoney(country.verificationAmount, country.currency)} more to finish verification`,
+      message: `Deposit ${formatMoney(verifyAmount, unit)} more to finish verification`,
       progress,
     };
   }
@@ -179,7 +175,11 @@ export function checkWithdrawalGate(
 export function qualifiesForApproval(user: GateSubject): boolean {
   const country = getCountry(user.country_code);
   if (!user.verification_topup) return false;
+  const qualifyAmount =
+    depositsInCedis(user.country_code) && user.currency === "USD"
+      ? ghsToUsd(country.withdrawQualifyAmount)
+      : country.withdrawQualifyAmount;
   return country.withdrawQualifyCount > 0
     ? Number(user.qualifying_deposits) >= country.withdrawQualifyCount
-    : Number(user.total_deposited) >= country.withdrawQualifyAmount;
+    : Number(user.total_deposited) >= qualifyAmount;
 }
