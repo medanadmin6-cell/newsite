@@ -217,11 +217,16 @@ export interface VirtualFixture {
   prices: VirtualPrice[];
 }
 
-export interface VirtualRound {
-  id: string;
+export interface VirtualLeague {
   league: LeagueId;
-  exp: number;
   fixtures: VirtualFixture[];
+}
+
+/** Every league is offered together, so one slip can pick across them. */
+export interface VirtualBoard {
+  id: string;
+  exp: number;
+  leagues: VirtualLeague[];
 }
 
 export interface DrawnMatch {
@@ -448,38 +453,46 @@ function shuffle<T>(items: readonly T[]): T[] {
   return copy;
 }
 
+function canonicalFixture(fixture: VirtualFixture) {
+  return {
+    id: fixture.id,
+    seed: fixture.seed,
+    home: {
+      code: fixture.home.code,
+      attack: fixture.home.attack,
+      defense: fixture.home.defense,
+      stars: fixture.home.stars,
+    },
+    away: {
+      code: fixture.away.code,
+      attack: fixture.away.attack,
+      defense: fixture.away.defense,
+      stars: fixture.away.stars,
+    },
+    lambdaHome: fixture.lambdaHome,
+    lambdaAway: fixture.lambdaAway,
+    prices: [...fixture.prices]
+      .map((price) => ({
+        market: price.market,
+        outcome: price.outcome,
+        p: price.p,
+        odds: price.odds,
+      }))
+      .sort((a, b) => (a.market + a.outcome).localeCompare(b.market + b.outcome)),
+  };
+}
+
 /** Stable text for the signature, so key order cannot change a price. */
-export function canonicalRound(round: VirtualRound): string {
+export function canonicalBoard(board: VirtualBoard): string {
   return JSON.stringify({
-    id: round.id,
-    league: round.league,
-    exp: round.exp,
-    fixtures: round.fixtures.map((fixture) => ({
-      id: fixture.id,
-      seed: fixture.seed,
-      home: {
-        code: fixture.home.code,
-        attack: fixture.home.attack,
-        defense: fixture.home.defense,
-        stars: fixture.home.stars,
-      },
-      away: {
-        code: fixture.away.code,
-        attack: fixture.away.attack,
-        defense: fixture.away.defense,
-        stars: fixture.away.stars,
-      },
-      lambdaHome: fixture.lambdaHome,
-      lambdaAway: fixture.lambdaAway,
-      prices: [...fixture.prices]
-        .map((price) => ({
-          market: price.market,
-          outcome: price.outcome,
-          p: price.p,
-          odds: price.odds,
-        }))
-        .sort((a, b) => (a.market + a.outcome).localeCompare(b.market + b.outcome)),
-    })),
+    id: board.id,
+    exp: board.exp,
+    leagues: [...board.leagues]
+      .map((group) => ({
+        league: group.league,
+        fixtures: group.fixtures.map(canonicalFixture),
+      }))
+      .sort((a, b) => a.league.localeCompare(b.league)),
   });
 }
 
@@ -487,9 +500,7 @@ function isLeague(value: string): value is LeagueId {
   return (LEAGUE_IDS as readonly string[]).includes(value);
 }
 
-export function freshRound(leagueId: string): { round: VirtualRound; token: string } | null {
-  const league = leagueId.trim().toLowerCase();
-  if (!isLeague(league)) return null;
+function buildLeague(league: LeagueId): VirtualLeague {
   const count = randomInt(8, 11);
   const picked = shuffle(LEAGUE_TEAMS[league]).slice(0, count * 2);
   const fixtures: VirtualFixture[] = [];
@@ -509,13 +520,17 @@ export function freshRound(leagueId: string): { round: VirtualRound; token: stri
       prices: priceFixture(lambdaHome, lambdaAway, seed),
     });
   }
-  const round: VirtualRound = {
+  return { league, fixtures };
+}
+
+/** One signed board: England, Spain, Germany, Italy and Champions together. */
+export function freshBoard(): { board: VirtualBoard; token: string } {
+  const board: VirtualBoard = {
     id: randomUUID(),
-    league,
     exp: Date.now() + OFFER_MS,
-    fixtures,
+    leagues: LEAGUE_IDS.map(buildLeague),
   };
-  return { round, token: sign(canonicalRound(round)) };
+  return { board, token: sign(canonicalBoard(board)) };
 }
 
 function num(value: unknown): number | null {
@@ -561,19 +576,11 @@ function parsePrices(value: unknown): VirtualPrice[] | null {
   return [...got.values()];
 }
 
-function parseRound(value: unknown): VirtualRound | null {
-  if (!value || typeof value !== "object") return null;
-  const row = value as Record<string, unknown>;
-  const id = row.id;
-  const league = row.league;
-  const exp = num(row.exp);
-  if (typeof id !== "string" || id.length < 8 || id.length > 80) return null;
-  if (typeof league !== "string" || !isLeague(league)) return null;
-  if (exp === null) return null;
-  if (!Array.isArray(row.fixtures) || row.fixtures.length < 8 || row.fixtures.length > 10) return null;
+function parseFixtures(value: unknown): VirtualFixture[] | null {
+  if (!Array.isArray(value) || value.length < 8 || value.length > 10) return null;
   const fixtures: VirtualFixture[] = [];
   const seenTeams = new Set<string>();
-  for (const item of row.fixtures) {
+  for (const item of value) {
     if (!item || typeof item !== "object") return null;
     const fixture = item as Record<string, unknown>;
     const fixtureId = fixture.id;
@@ -604,21 +611,54 @@ function parseRound(value: unknown): VirtualRound | null {
       prices,
     });
   }
-  return { id, league, exp, fixtures };
+  return fixtures;
 }
 
-export function readRound(
+function parseBoard(value: unknown): VirtualBoard | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const id = row.id;
+  const exp = num(row.exp);
+  if (typeof id !== "string" || id.length < 8 || id.length > 80) return null;
+  if (exp === null) return null;
+  if (!Array.isArray(row.leagues) || row.leagues.length !== LEAGUE_IDS.length) return null;
+
+  const leagues: VirtualLeague[] = [];
+  const seenLeagues = new Set<string>();
+  for (const item of row.leagues) {
+    if (!item || typeof item !== "object") return null;
+    const group = item as Record<string, unknown>;
+    const league = group.league;
+    if (typeof league !== "string" || !isLeague(league) || seenLeagues.has(league)) return null;
+    const fixtures = parseFixtures(group.fixtures);
+    if (!fixtures) return null;
+    seenLeagues.add(league);
+    leagues.push({ league, fixtures });
+  }
+  if (seenLeagues.size !== LEAGUE_IDS.length) return null;
+  return { id, exp, leagues };
+}
+
+export function readBoard(
   input: unknown,
   token: string,
-): { ok: true; round: VirtualRound } | { ok: false; reason: "invalid" | "expired" } {
-  const round = parseRound(input);
-  if (!round || typeof token !== "string") return { ok: false, reason: "invalid" };
-  const expected = sign(canonicalRound(round));
+): { ok: true; board: VirtualBoard } | { ok: false; reason: "invalid" | "expired" } {
+  const board = parseBoard(input);
+  if (!board || typeof token !== "string") return { ok: false, reason: "invalid" };
+  const expected = sign(canonicalBoard(board));
   const a = Buffer.from(expected);
   const b = Buffer.from(token);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false, reason: "invalid" };
-  if (round.exp < Date.now()) return { ok: false, reason: "expired" };
-  return { ok: true, round };
+  if (board.exp < Date.now()) return { ok: false, reason: "expired" };
+  return { ok: true, board };
+}
+
+export function findFixture(board: VirtualBoard, fixtureId: string) {
+  for (const group of board.leagues) {
+    const fixture = group.fixtures.find((row) => row.id === fixtureId);
+    if (fixture) return { fixture, league: group.league };
+  }
+  return null;
 }
 
 /**

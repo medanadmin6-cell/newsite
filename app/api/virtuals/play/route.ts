@@ -3,12 +3,12 @@ import { db } from "@/lib/supabase";
 import { ticketCode } from "@/lib/codes";
 import {
   drawFixture,
+  findFixture,
   LEAGUE_NAMES,
   outcomeWins,
-  readRound,
+  readBoard,
   signedOdds,
   type DrawnMatch,
-  type VirtualRound,
 } from "@/lib/virtuals";
 
 export const dynamic = "force-dynamic";
@@ -21,14 +21,15 @@ interface IncomingPick {
   fixtureId?: string;
   market?: string;
   outcome?: string;
+  stake?: number;
 }
 
 /**
  * Kick off a signed round.
  *
- * Every pick is its own single: the stake is per pick, and one loser does
- * not void the others. The score is drawn from the signed lambdas with
- * crypto randomness. The stake is not an input to that draw.
+ * Every pick is its own single, with its own stake. One loser does not void
+ * the others. The score is drawn from the signed lambdas with crypto
+ * randomness. The stake is not an input to that draw.
  */
 export async function POST(req: Request) {
   const supabase = db();
@@ -36,9 +37,8 @@ export async function POST(req: Request) {
 
   let body: {
     userId?: string;
-    stake?: number;
     token?: string;
-    round?: VirtualRound;
+    board?: unknown;
     picks?: IncomingPick[];
   };
   try {
@@ -47,22 +47,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const stake = Math.round(Number(body.stake) * 100) / 100;
   const picks = body.picks ?? [];
-  if (!Number.isFinite(stake) || stake < MIN_STAKE || stake > MAX_STAKE) {
-    return NextResponse.json({ error: `Stake between ${MIN_STAKE} and ${MAX_STAKE}` }, { status: 400 });
-  }
   if (!picks.length) return NextResponse.json({ error: "Your slip is empty" }, { status: 400 });
   if (picks.length > MAX_PICKS) {
     return NextResponse.json({ error: `A slip can hold at most ${MAX_PICKS} picks` }, { status: 400 });
   }
 
-  const checked = readRound(body.round, body.token ?? "");
+  const checked = readBoard(body.board, body.token ?? "");
   if (!checked.ok) {
     const error = checked.reason === "expired" ? "This round expired. Take the next one." : "This round is not valid. Take the next one.";
     return NextResponse.json({ error }, { status: 400 });
   }
-  const round = checked.round;
+  const board = checked.board;
 
   const seen = new Set<string>();
   const priced: {
@@ -72,6 +68,8 @@ export async function POST(req: Request) {
     odds: number;
     home: string;
     away: string;
+    league: keyof typeof LEAGUE_NAMES;
+    stake: number;
   }[] = [];
 
   for (const pick of picks) {
@@ -81,18 +79,24 @@ export async function POST(req: Request) {
     const key = `${pick.fixtureId}|${pick.market}|${pick.outcome}`;
     if (seen.has(key)) return NextResponse.json({ error: "That pick is already on the slip" }, { status: 400 });
     seen.add(key);
-    const fixture = round.fixtures.find((row) => row.id === pick.fixtureId);
-    const odds = fixture ? signedOdds(fixture, pick.market, pick.outcome) : null;
-    if (!fixture || odds === null) {
+    const found = findFixture(board, pick.fixtureId);
+    const odds = found ? signedOdds(found.fixture, pick.market, pick.outcome) : null;
+    const stake = Math.round(Number(pick.stake) * 100) / 100;
+    if (!Number.isFinite(stake) || stake < MIN_STAKE || stake > MAX_STAKE) {
+      return NextResponse.json({ error: `Each single needs a stake between ${MIN_STAKE} and ${MAX_STAKE}` }, { status: 400 });
+    }
+    if (!found || odds === null) {
       return NextResponse.json({ error: "That pick is not on this round" }, { status: 400 });
     }
     priced.push({
-      fixtureId: fixture.id,
+      fixtureId: found.fixture.id,
       market: pick.market,
       outcome: pick.outcome,
       odds,
-      home: fixture.home.code,
-      away: fixture.away.code,
+      home: found.fixture.home.code,
+      away: found.fixture.away.code,
+      league: found.league,
+      stake,
     });
   }
 
@@ -105,7 +109,7 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (!user) return NextResponse.json({ error: "Sign in to play" }, { status: 401 });
 
-  const totalDebit = Math.round(stake * priced.length * 100) / 100;
+  const totalDebit = Math.round(priced.reduce((sum, pick) => sum + pick.stake, 0) * 100) / 100;
   const held = Number(user.balance);
   if (held < totalDebit) return NextResponse.json({ error: "Not enough balance" }, { status: 402 });
 
@@ -124,20 +128,16 @@ export async function POST(req: Request) {
   };
 
   const drawn = new Map<string, DrawnMatch>();
-  for (const pick of priced) {
-    if (drawn.has(pick.fixtureId)) continue;
-    const fixture = round.fixtures.find((row) => row.id === pick.fixtureId);
-    if (!fixture) {
-      await restore();
-      return NextResponse.json({ error: "That pick is not on this round" }, { status: 400 });
+  for (const group of board.leagues) {
+    for (const fixture of group.fixtures) {
+      drawn.set(fixture.id, drawFixture(fixture.lambdaHome, fixture.lambdaAway));
     }
-    drawn.set(pick.fixtureId, drawFixture(fixture.lambdaHome, fixture.lambdaAway));
   }
 
   const settled = priced.map((pick) => {
     const score = drawn.get(pick.fixtureId)!;
     const won = outcomeWins(pick.market, pick.outcome, score);
-    const payout = won ? Math.round(stake * pick.odds * 100) / 100 : 0;
+    const payout = won ? Math.round(pick.stake * pick.odds * 100) / 100 : 0;
     return { ...pick, won, payout, score };
   });
   const totalPayout = Math.round(settled.reduce((sum, pick) => sum + pick.payout, 0) * 100) / 100;
@@ -152,13 +152,12 @@ export async function POST(req: Request) {
     }
   }
 
-  const leagueName = LEAGUE_NAMES[round.league];
   const rows = settled.map((pick) => ({
     code: ticketCode(),
     user_id: user.id,
-    stake,
+    stake: pick.stake,
     total_odds: pick.odds,
-    potential_win: Math.round(stake * pick.odds * 100) / 100,
+    potential_win: Math.round(pick.stake * pick.odds * 100) / 100,
     currency: user.currency,
     status: pick.won ? "won" : "lost",
     payout: pick.payout,
@@ -192,7 +191,7 @@ export async function POST(req: Request) {
       match_id: `virtual-${pick.fixtureId}`,
       home_team: pick.home,
       away_team: pick.away,
-      league: leagueName,
+      league: LEAGUE_NAMES[pick.league],
       sport: "virtual",
       kickoff: new Date().toISOString(),
       market: pick.market,
@@ -215,22 +214,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not save the match. Your stake was returned." }, { status: 500 });
   }
 
-  const fixtures = [...drawn.entries()].map(([id, score]) => {
-    const fixture = round.fixtures.find((row) => row.id === id)!;
-    return {
-      id,
-      home: fixture.home.code,
-      away: fixture.away.code,
-      homeGoals: score.homeGoals,
-      awayGoals: score.awayGoals,
-      events: score.events,
-    };
-  });
+  const fixtures = board.leagues.flatMap((group) =>
+    group.fixtures.map((fixture) => {
+      const score = drawn.get(fixture.id)!;
+      return {
+        id: fixture.id,
+        league: group.league,
+        home: fixture.home.code,
+        away: fixture.away.code,
+        homeGoals: score.homeGoals,
+        awayGoals: score.awayGoals,
+        events: score.events,
+      };
+    }),
+  );
 
   return NextResponse.json({
     balance: finalBalance,
     currency: user.currency,
-    stake,
+    stake: totalDebit,
     totalDebit,
     payout: totalPayout,
     won: settled.filter((pick) => pick.won).length,
@@ -241,6 +243,7 @@ export async function POST(req: Request) {
         code: ticket.code,
         won: pick.won,
         odds: pick.odds,
+        stake: pick.stake,
         payout: pick.payout,
         market: pick.market,
         outcome: pick.outcome,
