@@ -17,10 +17,6 @@ const SCRIPT: { q: string; a: string }[] = [
     a: "Open Deposit, enter the amount and your mobile money number, then approve the prompt on your phone. If your market uses the manual rail, send to the displayed number and upload a screenshot — our team confirms it shortly after.",
   },
   {
-    q: "When can I withdraw?",
-    a: "Withdrawals unlock after three separate qualifying deposits. Deposits are counted, not added up, so one large deposit does not unlock it. Your Account screen shows exactly how many you have.",
-  },
-  {
     q: "My deposit has not shown up",
     a: "Open your Account screen — that alone re-checks any payment that completed while you were away. If it is a manual deposit it stays pending until our team confirms it. Still stuck after 15 minutes? Message us on WhatsApp.",
   },

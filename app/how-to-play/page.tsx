@@ -45,18 +45,6 @@ export default function HowToPlayPage() {
           </p>
         </Section>
 
-        <Section title="Withdrawals">
-          <p>
-            Withdrawals unlock after <strong>three separate qualifying deposits</strong> — not one
-            large one. Deposits are counted, not added up, so paying the whole amount at once
-            unlocks nothing.
-          </p>
-          <p>
-            Your Account screen shows exactly how many you have. Once unlocked, a withdrawal is
-            reviewed and paid to your mobile money number.
-          </p>
-        </Section>
-
         <Section title="When bets settle" id="settlement">
           <p>
             Match result, goals, corners, handicaps and half-time markets settle automatically as

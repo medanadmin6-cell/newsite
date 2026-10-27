@@ -292,6 +292,7 @@ export default function VirtualsPage() {
   const setBalance = useSession((s) => s.setBalance);
 
   const [pack, setPack] = useState<Offer | null>(null);
+  const [league, setLeague] = useState<LeagueId>("england");
   const [market, setMarket] = useState<MainMarket>("1x2");
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
   const [picks, setPicks] = useState<SlipPick[]>([]);
@@ -374,6 +375,11 @@ export default function VirtualsPage() {
     if (busy) return;
     if (played) setBalance(Number(played.balance));
     void load();
+  };
+
+  const chooseLeague = (id: LeagueId) => {
+    if (busy || phase !== "board") return;
+    setLeague(id);
   };
 
   const selected = (fixtureId: string, key: string, outcome: string) =>
@@ -481,8 +487,43 @@ export default function VirtualsPage() {
       <div className="min-w-0 px-3 pb-16 pt-3">
         <h1 className="text-[20px] font-black">Instant Football</h1>
         <p className="mt-0.5 text-[12px] text-[var(--text-muted)]">
-          Singles only. Pick from England, Spain and the rest, then kick off.
+          Singles only. Pick England, then Spain, then the rest. They stay on one slip.
         </p>
+
+        <nav className="scroll-x mt-3 flex gap-2" aria-label="Leagues">
+          {LEAGUES.map((item) => {
+            const count = picks.filter((pick) => pick.league === item.id).length;
+            const on = item.id === league;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => chooseLeague(item.id)}
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold"
+                style={
+                  on
+                    ? { background: "var(--accent)", color: "var(--accent-ink)" }
+                    : { background: "#fff", color: "var(--text)", boxShadow: "inset 0 0 0 1px var(--line)" }
+                }
+              >
+                <LeagueFlag id={item.id} />
+                {item.label}
+                {count > 0 && (
+                  <span
+                    className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-black"
+                    style={
+                      on
+                        ? { background: "#fff", color: "var(--accent)" }
+                        : { background: "var(--accent)", color: "var(--accent-ink)" }
+                    }
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
         <nav className="scroll-x mt-3 flex gap-4 border-b border-[var(--line)]" aria-label="Markets">
           {MAIN.map((item) => {
@@ -532,7 +573,9 @@ export default function VirtualsPage() {
 
         {!loading && pack && (phase === "board" || played) && (
           <div className="mt-3 space-y-4">
-            {pack.board.leagues.map((group) => {
+            {pack.board.leagues
+              .filter((group) => phase !== "board" || group.league === league)
+              .map((group) => {
               const leagueName = LEAGUES.find((item) => item.id === group.league)?.label ?? group.league;
               return (
                 <section key={group.league}>

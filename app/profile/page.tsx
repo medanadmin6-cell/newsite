@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
@@ -51,8 +51,6 @@ export default function ProfilePage() {
 
   const u = data?.user;
   const tier = standing(data?.tierPoints ?? 0);
-  const canWithdraw = Boolean(data?.partner);
-  const unlocked = canWithdraw && data?.withdrawal.unlocked;
 
   return (
     <Page>
@@ -72,26 +70,6 @@ export default function ProfilePage() {
         <h2 className="mt-6 text-[15px] font-bold">Account standing</h2>
 
         <section className="mt-2 overflow-hidden rounded-2xl bg-white shadow-sm">
-          <div className="flex items-start gap-3 border-b border-[var(--line)] px-4 py-3.5">
-            <span style={{ color: unlocked ? "var(--win)" : "var(--pending)" }}>
-              {unlocked ? (
-                <ShieldCheck size={19} strokeWidth={1.8} />
-              ) : (
-                <ShieldAlert size={19} strokeWidth={1.8} />
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold">
-                Withdrawals {unlocked ? "unlocked" : "locked"}
-              </p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-                {canWithdraw
-                  ? "This sub-admin account can withdraw."
-                  : "Withdrawals are available on a sub-admin account."}
-              </p>
-            </div>
-          </div>
-
           <Field label="Deposited" value={formatMoney(Number(u?.total_deposited ?? 0), player.currency)} />
           <Field label="Withdrawn" value={formatMoney(Number(u?.total_withdrawn ?? 0), player.currency)} />
         </section>
