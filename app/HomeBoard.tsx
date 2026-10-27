@@ -4,17 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import {
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Dices,
-  Settings,
-  Grid2x2,
-  Ticket,
-  Trophy,
-  Zap,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Page } from "@/components/Shell";
 import { MatchList } from "@/components/MatchList";
 import { BetSlip } from "@/components/BetSlip";
@@ -25,12 +15,12 @@ import type { FeedMatch } from "@/lib/fixtures";
 const POLL_MS = 30_000;
 
 const ACTIONS = [
-  { label: "Soccer", href: "/?tab=football", Icon: Trophy },
-  { label: "Today", href: "/?tab=today", Icon: Calendar },
-  { label: "Odds Filter", href: "/?tab=boosted", Icon: Settings },
-  { label: "Instant Virtuals", href: "/virtuals", Icon: Zap },
-  { label: "Booking Codes", href: "/load-code", Icon: Ticket },
-  { label: "ALL", href: "/az", Icon: Grid2x2 },
+  { label: "Football", href: "/?tab=football" },
+  { label: "Today", href: "/?tab=today" },
+  { label: "Live", href: "/?tab=live" },
+  { label: "Instant", href: "/virtuals" },
+  { label: "Codes", href: "/load-code" },
+  { label: "Sports", href: "/az" },
 ];
 
 const LIVE_SPORTS = [
@@ -38,12 +28,6 @@ const LIVE_SPORTS = [
   { key: "vsoccer", label: "V-Soccer" },
   { key: "esoccer", label: "ESports Soccer" },
   { key: "basketball", label: "Basketball" },
-];
-
-const GAMES = [
-  { name: "Aviator", tag: "HOT", mult: "8.42x", image: "/games/aviator.jpg" },
-  { name: "Mines", tag: "", mult: "5.24x", image: "/games/mines.jpg" },
-  { name: "Crash", tag: "", mult: "", image: "/games/crash.jpg" },
 ];
 
 function isSoccer(match: FeedMatch) {
@@ -113,79 +97,37 @@ export function HomeBoard() {
   return (
     <Page>
       <div className="space-y-3 px-3 pt-3">
-        <Link
-          href="/games"
-          className="relative block h-[168px] overflow-hidden rounded-2xl bg-[#14061f] text-white"
-        >
-          <Image
-            src="/games/aviator.jpg"
-            alt="Red plane climbing through a night sky"
-            fill
-            sizes="100vw"
-            className="object-cover object-right"
-            priority
-          />
-          <span className="absolute inset-0 bg-gradient-to-r from-[#14061f] via-[#14061f]/75 to-transparent" />
-          <span className="relative block px-4 py-4">
-            <p className="text-[11px] font-black tracking-[0.14em] text-white/70">AVIATOR</p>
-            <p className="mt-1 text-[22px] font-black leading-none">FLY HIGH, WIN BIG</p>
-            <p className="mt-1 max-w-[180px] text-[11px] text-white/70">
-              Cash out before the lucky plane flies away!
-            </p>
-            <p className="mt-3 text-[28px] font-black text-[#ff4d6d]">18.75x</p>
-          </span>
-        </Link>
+        <section className="rounded-3xl bg-[#0f1c33] px-5 py-5 text-white">
+          <p className="text-[11px] font-bold tracking-[0.16em] text-white/45">THE BOARD</p>
+          <h1 className="mt-1 text-[26px] font-black leading-none">Today&apos;s football</h1>
+          <p className="mt-2 max-w-[260px] text-[13px] leading-snug text-white/65">
+            Price a real match, or start an instant round that settles on your wallet.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Link href="/?tab=football" className="rounded-2xl bg-white px-3 py-3 text-center text-[13px] font-black text-[#0f1c33]">
+              Matches
+            </Link>
+            <Link href="/virtuals" className="rounded-2xl bg-[#2f6bff] px-3 py-3 text-center text-[13px] font-black text-white">
+              Instant
+            </Link>
+          </div>
+        </section>
 
-        <div className="grid grid-cols-6 gap-1.5 rounded-2xl bg-white px-1 py-3 shadow-sm">
+        <div className="scroll-x flex gap-2">
           {ACTIONS.map((action) => (
-            <Link key={action.label} href={action.href} className="flex flex-col items-center gap-1.5 text-center">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e7efff] text-[var(--accent)]">
-                <action.Icon size={16} strokeWidth={2} />
-              </span>
-              <span className="text-[9px] font-semibold leading-tight text-[var(--text-muted)]">{action.label}</span>
+            <Link
+              key={action.label}
+              href={action.href}
+              className="shrink-0 rounded-full bg-white px-3 py-2 text-[12px] font-bold text-[var(--text-bright)] shadow-sm"
+            >
+              {action.label}
             </Link>
           ))}
         </div>
 
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-[13px] font-black tracking-wide text-[var(--text-bright)]">
-              <Dices size={14} className="text-[var(--accent)]" />
-              CASINO GAMES
-            </h2>
-            <Link href="/games" className="text-[12px] font-bold text-[var(--text-muted)]">
-              More &gt;
-            </Link>
-          </div>
-          <div className="scroll-x flex gap-2">
-            {GAMES.map((game) => (
-              <Link
-                key={game.name}
-                href="/games"
-                className="relative h-[92px] w-[148px] shrink-0 overflow-hidden rounded-xl text-white"
-              >
-                <Image src={game.image} alt="" fill sizes="148px" className="object-cover" />
-                <span className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-black/10" />
-                <span className="relative flex h-full flex-col p-3">
-                  {game.tag ? (
-                    <span className="w-fit rounded bg-[#ff4d6d] px-1.5 py-0.5 text-[9px] font-black">{game.tag}</span>
-                  ) : (
-                    <span className="h-[16px]" />
-                  )}
-                  <p className="mt-1 text-[14px] font-black">{game.name}</p>
-                  {game.mult && <p className="text-[12px] font-bold text-white/90">{game.mult}</p>}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-2xl bg-white p-3 shadow-sm">
+        <section className="rounded-3xl bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-[13px] font-black tracking-wide">
-              <Trophy size={14} className="text-[var(--accent)]" />
-              FEATURED MATCHES
-            </h2>
+            <h2 className="text-[15px] font-black text-[var(--text-bright)]">Featured</h2>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -203,8 +145,8 @@ export function HomeBoard() {
               >
                 <ChevronRight size={14} />
               </button>
-              <Link href="/?tab=boosted" className="ml-1 text-[11px] font-black text-[var(--accent)]">
-                BEST ODDS
+              <Link href="/?tab=boosted" className="ml-1 text-[12px] font-bold text-[var(--accent)]">
+                Best odds
               </Link>
             </div>
           </div>
@@ -229,9 +171,9 @@ export function HomeBoard() {
           )}
         </section>
 
-        <section className="rounded-2xl bg-white p-3 shadow-sm">
+        <section className="rounded-3xl bg-white p-4 shadow-sm">
           <div className="scroll-x flex items-center gap-4">
-            <span className="flex shrink-0 items-center gap-1 text-[13px] font-black text-[var(--accent)]">
+            <span className="flex shrink-0 items-center gap-1 text-[15px] font-black text-[var(--text-bright)]">
               <span className="live-dot h-2 w-2 rounded-full bg-[var(--live)]" />
               Live
             </span>
@@ -247,7 +189,7 @@ export function HomeBoard() {
               </button>
             ))}
           </div>
-          <p className="mt-3 text-[13px] font-bold text-[var(--text-bright)]">In-Play Matches</p>
+          <p className="mt-3 text-[12px] font-bold text-[var(--text-muted)]">In play now</p>
           <div className="mt-2">
             {liveSport === "soccer" ? (
               <MatchList
@@ -310,7 +252,7 @@ function FeaturedCard({ match }: { match: FeedMatch }) {
   };
 
   return (
-    <article className="w-[168px] shrink-0 rounded-xl border border-[var(--line)] bg-white p-2.5">
+    <article className="w-[210px] shrink-0 rounded-2xl bg-[var(--surface-2)] p-3">
       <div className="flex items-center justify-between gap-1">
         <p className="truncate text-[10px] font-bold text-[var(--text-muted)]">{match.league}</p>
         <time className="shrink-0 text-[10px] font-bold text-[var(--text-faint)]" dateTime={match.kickoff}>

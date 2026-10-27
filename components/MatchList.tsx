@@ -152,7 +152,7 @@ export function MatchList({
       </div>
 
       {grouped.map(([league, list]) => (
-        <section key={league} className="overflow-hidden rounded bg-[var(--bg-elevated)]">
+        <section key={league} className="overflow-hidden rounded-2xl bg-[var(--bg-elevated)] shadow-sm">
           <header className="flex items-center justify-between bg-[var(--surface)] px-3 py-2 md:px-4">
             <h2 className="truncate text-[12px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
               {league}
@@ -274,7 +274,7 @@ function MatchRow({
               key={outcome}
               disabled={disabled}
               onClick={() => price && pick(outcome, price.odds, price.label)}
-              className="h-[34px] w-[54px] rounded-[3px] text-[12px] font-black transition-colors disabled:opacity-35 md:h-[40px] md:w-[92px] md:text-[14px]"
+              className="h-[34px] w-[54px] rounded-xl text-[12px] font-black transition-colors disabled:opacity-35 md:h-[40px] md:w-[92px] md:text-[14px]"
               style={
                 isOn
                   ? { background: "var(--accent)", color: "var(--accent-ink)" }

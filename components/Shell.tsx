@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Calendar, Clock, Menu, Search, Ticket, User } from "lucide-react";
+import { Calendar, Clock, Search, Ticket, User } from "lucide-react";
 import { useSession, useSlip } from "@/lib/store";
 import { AccountDrawer } from "@/components/AccountDrawer";
 import { formatMoney } from "@/lib/countries";
@@ -27,9 +27,11 @@ function Mark({ size = 18 }: { size?: number }) {
 
 function Wordmark() {
   return (
-    <span className="flex items-center gap-1 text-[#2f6bff]">
-      <Mark size={18} />
-      <span className="text-[16px] font-black tracking-tight">VELORA</span>
+    <span className="flex items-center gap-1.5 text-white">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2f6bff]">
+        <Mark size={16} />
+      </span>
+      <span className="text-[16px] font-black tracking-tight">Velora</span>
     </span>
   );
 }
@@ -85,32 +87,28 @@ function HeaderActions({ onOpenAccount }: { onOpenAccount: () => void }) {
 
   return (
     <>
-      <Link href="/my-bets" className="flex items-center gap-1 text-[11px] font-black tracking-wide text-[var(--text-bright)]">
-        MY BETS
-        <Menu size={16} strokeWidth={2.4} />
-      </Link>
       {player ? (
         <button
           onClick={onOpenAccount}
           aria-label="Account and balance"
-          className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--text-bright)]"
+          className="rounded-full bg-white px-3 py-1 text-[12px] font-black text-[#0f1c33]"
         >
           {money}
         </button>
       ) : (
         <Link
           href="/login"
-          className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[12px] font-bold text-[var(--text-bright)]"
+          className="rounded-full bg-[#2f6bff] px-3 py-1 text-[12px] font-black text-white"
         >
-          {money}
+          Join
         </Link>
       )}
       {player ? (
-        <button onClick={onOpenAccount} aria-label="Account" className="text-[var(--text-bright)]">
+        <button onClick={onOpenAccount} aria-label="Account" className="text-white">
           <User size={20} strokeWidth={1.8} />
         </button>
       ) : (
-        <Link href="/login" aria-label="Log in" className="text-[var(--text-bright)]">
+        <Link href="/login" aria-label="Log in" className="text-white/80">
           <User size={20} strokeWidth={1.8} />
         </Link>
       )}
@@ -144,7 +142,7 @@ function TopNav() {
   };
 
   return (
-    <nav className="scroll-x flex gap-5 border-t border-[var(--line)] px-3">
+    <nav className="scroll-x flex gap-5 border-t border-white/10 px-3">
       {TOP.map((item) => {
         const on = active(item.key);
         return (
@@ -153,8 +151,8 @@ function TopNav() {
             href={item.href}
             className="shrink-0 border-b-2 py-2.5 text-[13px] font-bold"
             style={{
-              borderColor: on ? "var(--accent)" : "transparent",
-              color: on ? "var(--accent)" : "var(--text-muted)",
+              borderColor: on ? "#7aa2ff" : "transparent",
+              color: on ? "#ffffff" : "rgba(255,255,255,0.55)",
             }}
           >
             {item.label}
@@ -169,22 +167,22 @@ export function Header() {
   const [accountOpen, setAccountOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-white">
-      <div className="flex h-[52px] w-full items-center gap-2 px-3">
+    <header className="sticky top-0 z-40 bg-[#0f1c33]">
+      <div className="flex h-[56px] w-full items-center gap-2 px-3">
         <Link href="/" className="flex shrink-0 items-center" aria-label="Velora home">
           <Wordmark />
         </Link>
         <div className="flex flex-1 items-center justify-end gap-2.5">
-          <Link href="/transactions" aria-label="Recent activity" className="text-[var(--text-muted)]">
+          <Link href="/transactions" aria-label="Recent activity" className="text-white/70">
             <Clock size={18} strokeWidth={1.8} />
           </Link>
-          <Link href="/search" aria-label="Search" className="text-[var(--text-muted)]">
+          <Link href="/search" aria-label="Search" className="text-white/70">
             <Search size={18} strokeWidth={1.8} />
           </Link>
           <HeaderActions onOpenAccount={() => setAccountOpen(true)} />
         </div>
       </div>
-      <Suspense fallback={<div className="h-10 border-t border-[var(--line)]" />}>
+      <Suspense fallback={<div className="h-10 border-t border-white/10" />}>
         <TopNav />
       </Suspense>
       <AccountDrawer open={accountOpen} onClose={() => setAccountOpen(false)} />
