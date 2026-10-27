@@ -104,7 +104,7 @@ export function PhoneField({
   autoFocus?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-[var(--line)]">
+    <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 ring-1 ring-[var(--line)]">
       <span className="shrink-0 text-[15px] font-bold text-[var(--text-muted)]">+{country.dialCode}</span>
       <div className="relative flex-1">
         <input
@@ -146,7 +146,7 @@ export function PasswordField({
   const [shown, setShown] = useState(false);
 
   return (
-    <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-[var(--line)]">
+    <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 ring-1 ring-[var(--line)]">
       <input
         type={shown ? "text" : "password"}
         autoComplete={autoComplete}
