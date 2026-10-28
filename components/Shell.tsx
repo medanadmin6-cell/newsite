@@ -5,6 +5,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Calendar, Clock, Search, Ticket, User } from "lucide-react";
 import { useSession, useSlip } from "@/lib/store";
+import { WinCelebration, hasCelebrated, markCelebrated } from "@/components/WinCelebration";
 import { AccountDrawer } from "@/components/AccountDrawer";
 import { formatMoney } from "@/lib/countries";
 
@@ -278,6 +279,48 @@ export function SlipButton() {
   );
 }
 
+/** A settled win raises the cup on whatever page the player opens next. */
+function WinAnnounce() {
+  const player = useSession((s) => s.player);
+  const playerId = player?.id;
+  const [win, setWin] = useState<{ code: string; amount: number; currency: string } | null>(null);
+
+  useEffect(() => {
+    if (!playerId) return;
+    let alive = true;
+    fetch(`/api/bets/mine?userId=${playerId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive || !j) return;
+        const fresh = (j.bets ?? []).find(
+          (b: { status: string; code: string; payout: number | null; potential_win: number; currency: string }) =>
+            b.status === "won" && !hasCelebrated(b.code),
+        );
+        if (fresh && markCelebrated(fresh.code)) {
+          setWin({
+            code: fresh.code,
+            amount: Number(fresh.payout ?? fresh.potential_win),
+            currency: fresh.currency,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [playerId]);
+
+  if (!win) return null;
+  return (
+    <WinCelebration
+      code={win.code}
+      amount={win.amount}
+      currency={win.currency}
+      onClose={() => setWin(null)}
+    />
+  );
+}
+
 export function Page({
   children,
   tone = "plain",
@@ -298,6 +341,7 @@ export function Page({
       </main>
       {!hideSlip && <SlipButton />}
       <BottomNav />
+      <WinAnnounce />
     </>
   );
 }

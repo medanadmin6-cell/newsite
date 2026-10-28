@@ -11,21 +11,16 @@ import {
   ChevronRight,
   MapPin,
   Check,
-  Upload,
 } from "lucide-react";
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney, localSignificant } from "@/lib/countries";
 import { depositsInCedis, ghsToUsd, MIN_WALLET_DEPOSIT, usdToGhs } from "@/lib/fx";
 
-type Rail = "momo" | "manual";
-
 /**
  * The deposit screen.
  *
- * Two rails behind two tabs: the country's instant gateway, and the manual
- * transfer that every market falls back to. The limits and fee notes at the
- * bottom are read from the same country configuration the endpoint enforces,
- * so what a player is told is what actually happens.
+ * One rail: the country's instant gateway. The limits at the bottom are the
+ * same ones the endpoint enforces.
  */
 export default function DepositPage() {
   const router = useRouter();
@@ -34,7 +29,6 @@ export default function DepositPage() {
   const setBalance = useSession((s) => s.setBalance);
   const setWallet = useSession((s) => s.setWallet);
 
-  const [rail, setRail] = useState<Rail>("momo");
   const [amount, setAmount] = useState("");
   const [phoneEdit, setPhoneEdit] = useState<string | null>(null);
   const [network, setNetwork] = useState<string | null>(null);
@@ -43,7 +37,6 @@ export default function DepositPage() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [done, setDone] = useState<{ balance?: number; bonus?: number } | null>(null);
-  const [settings, setSettings] = useState<Record<string, string>>({});
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const country = getCountry(player?.country_code);
@@ -73,13 +66,6 @@ export default function DepositPage() {
       })
       .catch(() => {});
   }, [player?.id, setWallet]);
-
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => j?.settings && setSettings(j.settings))
-      .catch(() => {});
-  }, []);
 
   useEffect(
     () => () => {
@@ -160,29 +146,6 @@ export default function DepositPage() {
     }
   };
 
-  const submitManual = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const form = new FormData(e.currentTarget);
-      form.set("userId", player.id);
-      form.set("amount", String(value));
-
-      const res = await fetch("/api/deposits/manual", { method: "POST", body: form });
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error ?? "Could not record your deposit");
-        return;
-      }
-      setStatus(json.message);
-    } catch {
-      setError("Network problem. Try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   if (done) {
     return (
       <div className="min-h-screen bg-[var(--bg)]">
@@ -222,38 +185,6 @@ export default function DepositPage() {
       <DepositHeader onBack={() => router.back()} />
 
       <div className="mx-auto max-w-2xl">
-        {/* Rail tabs */}
-        <div className="grid grid-cols-2">
-          {(
-            [
-              { key: "momo", label: country.payoutRail === "bank" ? "Card / Bank" : "Mobile Money" },
-              { key: "manual", label: "Manual transfer" },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => {
-                setRail(t.key);
-                setError(null);
-                setStatus(null);
-              }}
-              className="relative py-3.5 text-[15px]"
-              style={{
-                color: rail === t.key ? "var(--text-bright)" : "var(--text-muted)",
-                fontWeight: rail === t.key ? 700 : 400,
-              }}
-            >
-              {t.label}
-              {rail === t.key && (
-                <span className="absolute inset-x-6 bottom-0 h-[3px] rounded-full bg-[var(--accent)]" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {rail === "momo" ? (
-          <>
-            {/* Account rows */}
             <SwitchRow
               icon={<Smartphone size={20} strokeWidth={1.7} className="text-[var(--text-muted)]" />}
               value={
@@ -344,66 +275,6 @@ export default function DepositPage() {
                 {busy ? "Starting…" : "Top Up Now"}
               </button>
             </div>
-          </>
-        ) : (
-          <form onSubmit={submitManual}>
-            <div className="mx-4 mt-4 rounded bg-[var(--bg-elevated)] p-4">
-              <p className="text-[12px] text-[var(--text-muted)]">Send to</p>
-              <p className="mt-0.5 text-[20px] font-black tracking-wide text-[var(--accent)]">
-                {settings.deposit_account_number ?? "—"}
-              </p>
-              <p className="text-[12px] text-[var(--text-muted)]">
-                {settings.deposit_account_name ?? "Betvanta"} ·{" "}
-                {settings.deposit_account_network ?? "Mobile Money"}
-              </p>
-            </div>
-
-            <AmountField
-              currency={walletCurrency}
-              value={amount}
-              onChange={setAmount}
-              hint={`min. ${min.toFixed(2)}`}
-            />
-            {cedis && value > 0 && (
-              <p className="px-4 pt-2 text-[12px] text-[var(--text-muted)]">
-                Send {formatMoney(usdToGhs(value), "GHS")}. Your account receives {formatMoney(value, "USD")}.
-              </p>
-            )}
-
-            <div className="space-y-3 px-4 pt-3">
-              <label className="block">
-                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
-                  Number you sent from
-                </span>
-                <input
-                  name="senderNumber"
-                  type="tel"
-                  defaultValue={player.phone}
-                  className="w-full rounded bg-[var(--surface-2)] px-3 py-2.5 text-[14px] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
-
-              <label className="flex cursor-pointer items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-3 text-[13px] text-[var(--text-muted)]">
-                <Upload size={16} strokeWidth={1.9} />
-                Screenshot of the transfer
-                <input name="screenshot" type="file" accept="image/*" className="sr-only" />
-              </label>
-
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className="w-full rounded-[4px] py-3.5 text-[16px] font-bold"
-                style={
-                  canSubmit
-                    ? { background: "var(--accent)", color: "var(--accent-ink)" }
-                    : { background: "var(--surface)", color: "var(--text-muted)" }
-                }
-              >
-                {busy ? "Sending…" : "I have sent the money"}
-              </button>
-            </div>
-          </form>
-        )}
 
         {/* Feedback */}
         <div className="space-y-2 px-4 pt-3">
@@ -428,7 +299,7 @@ export default function DepositPage() {
         </div>
 
         {/* The rules, read from the same config the endpoint enforces. */}
-        <ol className="mt-6 space-y-2 px-4 pb-10 text-[13px] leading-relaxed text-[var(--text-muted)]">
+        <ol className="mt-6 space-y-2 px-4 text-[13px] leading-relaxed text-[var(--text-muted)]">
           <li>
             1. The maximum amount per transaction is{" "}
             <strong className="text-[var(--accent)]">{formatMoney(max, walletCurrency)}</strong>. To
@@ -458,12 +329,51 @@ export default function DepositPage() {
             href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mx-4 mb-10 block rounded py-3 text-center text-[12px] font-bold text-[var(--accent)] ring-1 ring-[var(--line)]"
+            className="mx-4 mt-6 block rounded py-3 text-center text-[12px] font-bold text-[var(--accent)] ring-1 ring-[var(--line)]"
           >
             Payment problem? Chat on WhatsApp
           </a>
         )}
+
+        <PayMarks />
       </div>
+    </div>
+  );
+}
+
+function PayMarks() {
+  return (
+    <div className="flex items-center justify-center gap-3 px-4 pb-10 pt-8" aria-label="Payment methods">
+      <span
+        className="flex h-10 items-center rounded-full bg-[#f7931a] px-2.5 text-[13px] font-black tracking-tight text-white"
+        title="Bitcoin"
+        aria-label="Bitcoin"
+      >
+        BTC
+      </span>
+      <span
+        className="flex h-10 items-center rounded-md bg-[#ffcc00] px-2.5 text-[15px] font-black italic tracking-tight text-black"
+        title="MTN"
+        aria-label="MTN"
+      >
+        MTN
+      </span>
+      <span className="flex h-10 items-center rounded-md bg-white px-2 shadow-sm ring-1 ring-[var(--line)]" title="Credit card" aria-label="Credit card">
+        <svg viewBox="0 0 44 28" width="40" height="26" aria-hidden>
+          <rect width="44" height="28" rx="4" fill="#1434cb" />
+          <rect y="6" width="44" height="6" fill="#f7b600" />
+          <rect x="4" y="16" width="8" height="6" rx="1" fill="#d6deff" />
+          <rect x="16" y="17" width="16" height="2" rx="0.5" fill="#fff" />
+          <rect x="16" y="21" width="10" height="2" rx="0.5" fill="#9eb0ff" />
+        </svg>
+      </span>
+      <span
+        className="flex h-10 items-center rounded-md bg-[#e10600] px-2.5 text-[13px] font-black lowercase tracking-tight text-white"
+        title="Telecel"
+        aria-label="Telecel"
+      >
+        telecel
+      </span>
     </div>
   );
 }
