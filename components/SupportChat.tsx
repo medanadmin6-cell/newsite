@@ -22,7 +22,7 @@ const SCRIPT: { q: string; a: string }[] = [
   },
   {
     q: "How does the welcome bonus work?",
-    a: "Your first confirmed deposit gets a one-time bonus credited straight to your balance. It is a gift — it does not count toward unlocking withdrawals.",
+    a: "Deposit a high amount to claim your bonus. The bar on the deposit screen fills as you deposit, and the bonus is paid once when that bar is full. The bonus itself is a gift and does not fill the bar.",
   },
   {
     q: "What is a booking code?",

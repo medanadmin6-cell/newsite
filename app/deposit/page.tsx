@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney, localSignificant } from "@/lib/countries";
-import { depositsInCedis, ghsToUsd, MIN_WALLET_DEPOSIT, usdToGhs } from "@/lib/fx";
+import { depositsInCedis, ghsToUsd, highDepositTarget, MIN_WALLET_DEPOSIT, usdToGhs } from "@/lib/fx";
 
 /**
  * The deposit screen.
@@ -37,6 +37,7 @@ export default function DepositPage() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [done, setDone] = useState<{ balance?: number; bonus?: number } | null>(null);
+  const [deposited, setDeposited] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const country = getCountry(player?.country_code);
@@ -62,6 +63,9 @@ export default function DepositPage() {
       .then((j) => {
         if (j?.user && typeof j.user.currency === "string") {
           setWallet(Number(j.user.balance), j.user.currency);
+        }
+        if (j?.user && j.user.total_deposited != null) {
+          setDeposited(Number(j.user.total_deposited) || 0);
         }
       })
       .catch(() => {});
@@ -119,6 +123,8 @@ export default function DepositPage() {
             setStatus(null);
             setDone({ balance: sj.balance, bonus: sj.bonusPaid });
             if (typeof sj.balance === "number") setBalance(sj.balance);
+            setDeposited((d) => d + (Number.isFinite(value) ? value : 0));
+            setAmount("");
             return;
           }
           if (sj.status === "failed") {
@@ -156,15 +162,20 @@ export default function DepositPage() {
           </div>
           <h1 className="text-[20px] font-black">Deposit received</h1>
           {done.bonus ? (
-            <p className="text-[13px] text-[var(--accent)]">
-              Plus a {formatMoney(done.bonus, walletCurrency)} welcome bonus.
-            </p>
+            <p className="text-[13px] text-[var(--accent)]">Your bonus has been added.</p>
           ) : null}
           {typeof done.balance === "number" && (
             <p className="text-[15px] font-bold">
               New balance {formatMoney(done.balance, walletCurrency)}
             </p>
           )}
+          <div className="text-left">
+            <BonusBar
+              deposited={deposited}
+              adding={0}
+              target={highDepositTarget(player?.country_code ?? "US", walletCurrency)}
+            />
+          </div>
           <button
             onClick={() => router.push("/")}
             className="w-full rounded bg-[var(--accent)] py-3 text-[14px] font-black text-[var(--accent-ink)]"
@@ -248,6 +259,12 @@ export default function DepositPage() {
               Balance ({walletCurrency}) {Number(player.balance).toFixed(2)}
             </p>
 
+            <BonusBar
+              deposited={deposited}
+              adding={Number.isFinite(value) && value > 0 ? value : 0}
+              target={highDepositTarget(player.country_code, walletCurrency)}
+            />
+
             <AmountField
               currency={walletCurrency}
               value={amount}
@@ -322,6 +339,7 @@ export default function DepositPage() {
           <li>
             4. You can only withdraw to the mobile number you used to create your account.
           </li>
+          <li>5. Deposit a high amount to claim your bonus. The bar fills as you deposit.</li>
         </ol>
 
         {whatsapp && (
@@ -336,6 +354,41 @@ export default function DepositPage() {
         )}
 
         <PayMarks />
+      </div>
+    </div>
+  );
+}
+
+function BonusBar({
+  deposited,
+  adding,
+  target,
+}: {
+  deposited: number;
+  adding: number;
+  target: number;
+}) {
+  const filled = Math.max(0, deposited);
+  const preview = Math.min(target, filled + Math.max(0, adding));
+  const confirmedPct = target > 0 ? Math.min(100, (Math.min(filled, target) / target) * 100) : 0;
+  const previewPct = target > 0 ? Math.min(100, (preview / target) * 100) : 0;
+
+  return (
+    <div className="mx-4 mt-4">
+      <p className="text-[13px] font-bold text-[var(--text-bright)]">
+        Deposit a high amount to claim your bonus
+      </p>
+      <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+        <div className="relative h-full">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent)]/35 transition-[width] duration-300"
+            style={{ width: `${previewPct}%` }}
+          />
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent)] transition-[width] duration-300"
+            style={{ width: `${confirmedPct}%` }}
+          />
+        </div>
       </div>
     </div>
   );

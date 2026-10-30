@@ -1,3 +1,5 @@
+import { getCountry } from "./countries";
+
 /**
  * Ghana deposits are collected in cedis and credited in dollars.
  *
@@ -7,6 +9,8 @@
 
 export const WALLET_CURRENCY = "USD";
 export const MIN_WALLET_DEPOSIT = 25;
+/** One high total. The bonus is claimed when deposited money fills this, not after a count of deposits. */
+export const HIGH_DEPOSIT_USD = 100;
 
 const FALLBACK_GHS_PER_USD = 11.65;
 
@@ -32,6 +36,18 @@ export function usdToGhs(usd: number, rate = ghsPerUsd()): number {
 /** A Ghana account is shown and stored in dollars. Cedis exist only at the rail. */
 export function depositsInCedis(countryCode: string | null | undefined): boolean {
   return String(countryCode ?? "").toUpperCase() === "GH";
+}
+
+/**
+ * How much has to land in the wallet before the bonus is claimed.
+ * Dollar wallets share one target. Other markets use one high total instead of
+ * a count of separate deposits.
+ */
+export function highDepositTarget(countryCode: string, currency: string): number {
+  if (String(currency).toUpperCase() === "USD") return HIGH_DEPOSIT_USD;
+  const country = getCountry(countryCode);
+  const times = country.withdrawQualifyCount > 0 ? country.withdrawQualifyCount : 1;
+  return country.withdrawQualifyAmount * times;
 }
 
 export function ghanaToUsdPatch(user: {

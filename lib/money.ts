@@ -28,7 +28,7 @@ interface ReverseUser {
   currency: string;
 }
 import { getCountry } from "./countries";
-import { depositsInCedis, ghanaToUsdPatch, ghsToUsd, walletCreditFromCharge } from "./fx";
+import { depositsInCedis, ghanaToUsdPatch, ghsToUsd, highDepositTarget, walletCreditFromCharge } from "./fx";
 import { linkedSubAdmin } from "./partner";
 import { sendSms, paymentReceivedSms } from "./sms";
 
@@ -237,8 +237,11 @@ export async function applyDepositCredit(opts: {
   let bonusPaid = 0;
 
   // --- Step 2: one-time welcome bonus ------------------------------------
-  // A pure gift. It does not count toward verification and earns no commission.
-  if (isFirst && !user.bonus_paid) {
+  // Paid once, when deposited money fills the high amount. A smaller deposit
+  // only moves the bar. The gift does not earn commission.
+  const bonusTarget = highDepositTarget(user.country_code, creditCurrency);
+  const depositedBefore = Number(user.total_deposited);
+  if (!user.bonus_paid && depositedBefore + credit >= bonusTarget) {
     const bonus = envAmount(process.env.FIRST_DEPOSIT_BONUS, 100);
     if (bonus > 0) {
       try {

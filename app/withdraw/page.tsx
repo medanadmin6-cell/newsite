@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney } from "@/lib/countries";
-import { depositsInCedis, usdToGhs } from "@/lib/fx";
+import { depositsInCedis, highDepositTarget, usdToGhs } from "@/lib/fx";
 import { showWithdrawalIos } from "@/lib/withdrawal-ios";
 import { VerifyGate } from "@/components/VerifyGate";
 
@@ -157,10 +157,8 @@ export default function WithdrawPage() {
             the rule the endpoint enforces, and a way back out. */}
         {allowed === false && (
           <VerifyGate
-            amount={progress?.amount ?? country.withdrawQualifyAmount}
-            currency={walletCurrency}
             have={progress?.have ?? 0}
-            need={progress?.need ?? country.withdrawQualifyCount}
+            need={progress?.need ?? highDepositTarget(player.country_code, walletCurrency)}
             checking={rechecking}
             onBack={() => router.push("/")}
             onRecheck={async () => {
@@ -178,7 +176,6 @@ export default function WithdrawPage() {
           <p className="text-[26px] font-black text-[var(--accent)]">
             {formatMoney(Number(player.balance), walletCurrency)}
           </p>
-          {progress && <p className="mt-1 text-[11px] text-[var(--text-muted)]">{progress.label}</p>}
         </div>
         )}
 

@@ -36,7 +36,7 @@ interface Story {
 }
 
 const STORIES: Story[] = [
-  { title: "Welcome Bonus", kicker: "$50", href: "/register", art: "/promo/welcome-bonus.jpg" },
+  { title: "Welcome Bonus", kicker: "Claim", href: "/register", art: "/promo/welcome-bonus.jpg" },
   { title: "Best Odds", kicker: "Boosted", href: "/?tab=boosted", art: "/promo/best-odds.jpg" },
   { title: "Top Matches", href: "/?tab=today", art: "/promo/top-matches.jpg" },
   { title: "Live Now", href: "/?tab=live", art: "/promo/live-now.jpg" },

@@ -92,7 +92,7 @@ function Return() {
       <h1 className="text-[20px] font-black">Payment received</h1>
       {state.bonus && player ? (
         <p className="text-[13px] text-[var(--accent)]">
-          Plus a {formatMoney(state.bonus, player.currency)} welcome bonus.
+          Your bonus has been added.
         </p>
       ) : null}
       {typeof state.balance === "number" && player && (

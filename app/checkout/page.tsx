@@ -171,7 +171,7 @@ function Checkout() {
           <h1 className="text-[20px] font-black">Payment received</h1>
           {step.bonus ? (
             <p className="text-[13px] text-[var(--accent)]">
-              Plus a {formatMoney(step.bonus, player.currency)} welcome bonus.
+              Your bonus has been added.
             </p>
           ) : null}
           {typeof step.balance === "number" && (

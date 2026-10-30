@@ -103,7 +103,7 @@ console.log("\nLive odds drift");
   check("a level game late shortens the draw", levelLate.draw < base.draw, `${levelLate.draw}`);
 }
 
-console.log("\nWithdrawal gate (Ghana: 6 deposits of GHS 200, then GHS 300)");
+console.log("\nWithdrawal gate (one high total, bar fills with deposited money)");
 {
   const player = {
     country_code: "GH",
@@ -120,31 +120,37 @@ console.log("\nWithdrawal gate (Ghana: 6 deposits of GHS 200, then GHS 300)");
   const noDetails = checkWithdrawalGate({ ...player, payout_number: "12" }, 100);
   check("gate 1 rejects a bad payout number", noDetails.failed === "details");
 
-  // 900 deposited in one go is still zero qualifying deposits.
+  // 900 is under the high total (6 x GHS 200). A count of deposits does not matter.
   const notEnough = checkWithdrawalGate(player, 100);
-  check("gate 2 counts deposits rather than summing them", notEnough.failed === "deposits",
-    JSON.stringify(notEnough.failed));
+  check("a short total stays locked", notEnough.failed === "deposits", JSON.stringify(notEnough.failed));
+  check(
+    "the bar is filled money, not a deposit count",
+    notEnough.progress.have === 900 && notEnough.progress.need === 1200,
+    JSON.stringify(notEnough.progress),
+  );
 
-  const counted = { ...player, qualifying_deposits: 6 };
-  const needsTopUp = checkWithdrawalGate(counted, 100);
-  check("the counted deposits still leave the extra 300", needsTopUp.failed === "deposits" && needsTopUp.progress.amount === 300,
-    JSON.stringify(needsTopUp.progress));
+  const filled = { ...player, total_deposited: 1200, qualifying_deposits: 0 };
+  const needsApproval = checkWithdrawalGate(filled, 100);
+  check("reaching the high amount leaves operator approval", needsApproval.failed === "approval");
 
-  const qualified = { ...counted, verification_topup: true };
-  const needsApproval = checkWithdrawalGate(qualified, 100);
-  check("gate 3 asks for operator approval", needsApproval.failed === "approval");
-
-  const approved = { ...qualified, withdrawal_approved: true };
+  const approved = { ...filled, withdrawal_approved: true };
   check("a fully qualified player passes", checkWithdrawalGate(approved, 100).ok);
 
   const overBalance = checkWithdrawalGate(approved, 5000);
   check("cannot withdraw more than the balance", !overBalance.ok);
 
-  check("progress is reported for the meter",
-    needsTopUp.progress.have === 6 && needsTopUp.progress.need === 7);
-
   const exempt = checkWithdrawalGate(player, 100, {}, { skipDepositGate: true });
   check("an admin or approved sub-admin skips the deposit gate", exempt.failed === "approval");
+
+  const dollar = { ...player, currency: "USD", total_deposited: 40 };
+  const shortDollar = checkWithdrawalGate(dollar, 10);
+  check(
+    "a dollar wallet fills toward 100",
+    shortDollar.failed === "deposits" && shortDollar.progress.need === 100 && shortDollar.progress.have === 40,
+    JSON.stringify(shortDollar.progress),
+  );
+  const fullDollar = checkWithdrawalGate({ ...dollar, total_deposited: 100 }, 10);
+  check("100 dollars leaves operator approval", fullDollar.failed === "approval");
 }
 
 console.log("\nMarket grouping and 1X2 outcome labels");

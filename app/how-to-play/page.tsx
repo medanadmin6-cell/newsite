@@ -36,8 +36,8 @@ export default function HowToPlayPage() {
 
         <Section title="Deposits">
           <p>
-            Deposit by mobile money. Your first confirmed deposit gets a one-time welcome bonus paid
-            straight to your balance.
+            Deposit by mobile money. Deposit a high amount to claim your bonus. The bar on the
+            deposit screen fills as the money lands, and the bonus is paid once that bar is full.
           </p>
           <p>
             If a payment completes while you are away from the app, opening your Account screen

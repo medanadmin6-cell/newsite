@@ -68,15 +68,10 @@ export default function SettingsPage() {
               bonus, default 100
             </li>
             <li>
-              <code className="text-[var(--accent)]">WITHDRAW_QUALIFY_COUNT_GH</code> — qualifying
-              deposits needed; 0 reverts that market to the cumulative-total rule
+              The bonus is claimed when the deposit bar is full. The bar fills as money is deposited,
+              and the target amount is not shown to the player.
             </li>
             <li>
-              <code className="text-[var(--accent)]">WITHDRAW_QUALIFY_AMOUNT_GH</code> — how big each
-              qualifying deposit must be
-            </li>
-            <li>
-              <code className="text-[var(--accent)]">VERIFICATION_AMOUNT_GH</code>,{" "}
               <code className="text-[var(--accent)]">MIN_FIRST_DEPOSIT_GH</code>
             </li>
           </ul>
