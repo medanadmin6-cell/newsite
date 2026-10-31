@@ -151,7 +151,7 @@ export function WinCelebration({
         {/* Two wrappers: one throws the cup up, the other keeps it breathing. */}
         <div className="win-cup mt-2">
           <div className="win-cup-float">
-            <Trophy animated size={230} className="drop-shadow-[0_0_28px_rgba(255,82,82,0.35)]" />
+            <Trophy animated size={230} className="drop-shadow-[0_16px_28px_rgba(240,176,32,0.45)]" />
           </div>
         </div>
 
