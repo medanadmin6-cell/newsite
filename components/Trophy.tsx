@@ -1,7 +1,8 @@
 /**
  * The win cup.
  *
- * The artwork is a public-domain trophy with the Betvanta mark on the bowl.
+ * A gold trophy with figures on the handles, a crown on the lid, and a B
+ * on the bowl.
  */
 export function Trophy({
   size = 220,
@@ -14,10 +15,10 @@ export function Trophy({
   /** The celebration animates the wrapper around this. */
   animated?: boolean;
 }) {
-  const height = Math.round(size * (128.49 / 104.22));
+  const height = Math.round(size * (855 / 771));
   return (
     <img
-      src="/trophy.svg"
+      src="/trophy.png"
       alt="Betvanta trophy"
       width={size}
       height={height}
