@@ -234,10 +234,12 @@ export function BetSlip() {
                 </span>
               </span>
               <span className="ml-auto text-[15px] font-black text-[var(--pending)]">
-                {formatMoney(
-                  toDisplayAmount(player.country_code, player.currency, Number(player.balance ?? 0)).amount,
-                  currency,
-                )}
+                {player
+                  ? formatMoney(
+                      toDisplayAmount(player.country_code, player.currency, Number(player.balance ?? 0)).amount,
+                      currency,
+                    )
+                  : formatMoney(0, currency)}
               </span>
             </div>
 
