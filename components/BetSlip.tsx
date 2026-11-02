@@ -76,6 +76,9 @@ export function BetSlip() {
 
   const shown = toDisplayAmount(player?.country_code, player?.currency, 0);
   const currency = player ? shown.currency : "USD";
+  // The stored mode defaults to multiple. One pick is still a single, so the
+  // player can stake it without switching tabs first.
+  const placedMode: SlipMode = legs.length < 2 ? "single" : mode;
   const oddsPerLeg = useMemo(() => legs.map((l) => l.odds), [legs]);
 
   // What this slip becomes, and what it costs.
@@ -84,15 +87,15 @@ export function BetSlip() {
     const size = sizes.includes(systemSize) ? systemSize : (sizes[0] ?? 2);
 
     const lines =
-      mode === "single" ? legs.length : mode === "system" ? combinationCount(legs.length, size) : 1;
+      placedMode === "single" ? legs.length : placedMode === "system" ? combinationCount(legs.length, size) : 1;
 
     const totalOdds = legs.reduce((acc, l) => acc * l.odds, 1);
-    const bonus = mode === "multiple" && legs.length >= 2 ? bonusAmount(stake, totalOdds, oddsPerLeg) : 0;
+    const bonus = placedMode === "multiple" && legs.length >= 2 ? bonusAmount(stake, totalOdds, oddsPerLeg) : 0;
 
     const win =
-      mode === "multiple"
+      placedMode === "multiple"
         ? stake * totalOdds + bonus
-        : mode === "single"
+        : placedMode === "single"
           ? legs.reduce((acc, l) => acc + stake * l.odds, 0)
           : // A system pays per line; the best case is every combination landing.
             stake * legs.reduce((acc, l) => acc * l.odds, 1);
@@ -106,7 +109,7 @@ export function BetSlip() {
       win: Math.round(win * 100) / 100,
       cost: Math.round(stake * lines * 100) / 100,
     };
-  }, [legs, mode, systemSize, stake, oddsPerLeg]);
+  }, [legs, placedMode, systemSize, stake, oddsPerLeg]);
 
   const standing = bonusFor(oddsPerLeg);
 
@@ -126,7 +129,7 @@ export function BetSlip() {
         body: JSON.stringify({
           userId: player.id,
           stake: toWalletAmount(player.country_code, player.currency, stake),
-          mode,
+          mode: placedMode,
           systemSize: maths.size,
           acceptOddsChanges,
           selections: legs.map((l) => ({
@@ -279,7 +282,7 @@ export function BetSlip() {
             <div className="grid grid-cols-3 px-4">
               {TABS.map((t) => {
                 const disabled = t.key !== "single" && legs.length < 2;
-                const active = mode === t.key;
+                const active = placedMode === t.key;
                 return (
                   <button
                     key={t.key}
@@ -298,7 +301,7 @@ export function BetSlip() {
               })}
             </div>
 
-            {mode === "system" && maths.sizes.length > 0 && (
+            {placedMode === "system" && maths.sizes.length > 0 && (
               <div className="scroll-x flex gap-1.5 px-4 pt-3">
                 {maths.sizes.map((k) => (
                   <button
@@ -361,7 +364,7 @@ export function BetSlip() {
             ) : (
               <>
             {/* Bonus progress, on multiples only */}
-            {mode === "multiple" && (
+            {placedMode === "multiple" && (
               <div className="mx-4 mt-3 overflow-hidden rounded">
                 <div
                   className="flex items-center gap-2 px-3 py-2"
@@ -387,7 +390,7 @@ export function BetSlip() {
             <dl className="mt-3 px-4 text-[14px]">
               <div className="flex items-center justify-between py-2">
                 <dt className="text-[var(--text-muted)]">
-                  {mode === "multiple" ? "Total Stake" : "Stake per line"}
+                  {placedMode === "multiple" ? "Total Stake" : "Stake per line"}
                 </dt>
                 <dd className="flex items-center gap-2">
                   <span className="text-[12px] text-[var(--text-muted)]">{currency}</span>
@@ -405,13 +408,13 @@ export function BetSlip() {
 
               {maths.lines > 1 && (
                 <Row
-                  label={mode === "system" ? `Lines (${maths.size}/${legs.length})` : "Lines"}
+                  label={placedMode === "system" ? `Lines (${maths.size}/${legs.length})` : "Lines"}
                   value={`${maths.lines} × ${formatMoney(stake, currency)}`}
                 />
               )}
 
               <Row label="Total Odds" value={maths.totalOdds.toFixed(2)} />
-              {mode === "multiple" && <Row label="Max. Bonus" value={maths.bonus.toFixed(2)} />}
+              {placedMode === "multiple" && <Row label="Max. Bonus" value={maths.bonus.toFixed(2)} />}
 
               <div className="-mx-4 mt-1 flex items-center justify-between bg-[var(--surface)] px-4 py-2.5">
                 <dt className="font-bold">Potential Win</dt>
