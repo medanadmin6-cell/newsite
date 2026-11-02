@@ -131,7 +131,7 @@ export function LoadCodeWidget() {
   };
 
   return (
-    <div className="mx-2.5 mt-2 rounded-[6px] bg-[var(--bg-elevated)] p-2.5 md:mx-5">
+    <div className="rounded-[6px] bg-[var(--bg-elevated)] p-2.5">
       <form onSubmit={submit} className="flex items-center gap-2 rounded-[4px] bg-[var(--bg)] p-1.5">
         <input
           value={code}

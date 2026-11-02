@@ -51,6 +51,7 @@ export function BetSlip() {
     remove,
     clear,
     clearLegs,
+    load,
   } = useSlip();
 
   const player = useSession((s) => s.player);
@@ -73,6 +74,10 @@ export function BetSlip() {
   } | null>(null);
   const [booked, setBooked] = useState<{ code: string; expiresAt: string | null } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bookingCode, setBookingCode] = useState("");
+  const [bookingBusy, setBookingBusy] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookingTicket, setBookingTicket] = useState<string | null>(null);
 
   const shown = toDisplayAmount(player?.country_code, player?.currency, 0);
   const currency = player ? shown.currency : "USD";
@@ -170,6 +175,30 @@ export function BetSlip() {
     }
   };
 
+  const loadBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const entered = bookingCode.trim().toUpperCase();
+    if (!entered) return;
+    setBookingBusy(true);
+    setBookingError(null);
+    setBookingTicket(null);
+    try {
+      const res = await fetch(`/api/bookings/${encodeURIComponent(entered)}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setBookingError(json.error ?? "That code was not found");
+        if (json.ticket) setBookingTicket(json.ticket as string);
+        return;
+      }
+      load(json.booking.selections as SlipLeg[]);
+      setBookingCode("");
+    } catch {
+      setBookingError("Network problem. Try again.");
+    } finally {
+      setBookingBusy(false);
+    }
+  };
+
   const book = async () => {
     setBusy(true);
     setError(null);
@@ -221,9 +250,44 @@ export function BetSlip() {
             }}
           />
         ) : legs.length === 0 ? (
-          <p className="p-12 text-center text-[13px] text-[var(--text-muted)]">
-            Tap any odds to add a selection.
-          </p>
+          <div className="px-4 pb-6 pt-4">
+            <p className="text-center text-[13px] text-[var(--text-muted)]">
+              Tap any odds to add a selection.
+            </p>
+            <form onSubmit={loadBooking} className="mt-5">
+              <p className="text-[14px] font-bold text-[var(--text-bright)]">Paste a booking code</p>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  value={bookingCode}
+                  onChange={(e) => setBookingCode(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  maxLength={10}
+                  autoCapitalize="characters"
+                  className="min-w-0 flex-1 rounded border border-[var(--line)] bg-[var(--bg)] px-3 py-3 text-[16px] font-black tracking-[0.2em] outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+                <button
+                  type="submit"
+                  disabled={bookingBusy || bookingCode.trim().length < 4}
+                  className="shrink-0 rounded bg-[var(--accent)] px-4 py-3 text-[14px] font-black text-[var(--accent-ink)] disabled:opacity-50"
+                >
+                  {bookingBusy ? "…" : "Load"}
+                </button>
+              </div>
+              {bookingError && (
+                <p className="mt-2 text-[12px] text-[var(--lose)]">
+                  {bookingError}
+                  {bookingTicket && (
+                    <>
+                      {" "}
+                      <Link href={`/my-bets/${bookingTicket}`} className="font-bold text-[var(--accent)] underline">
+                        Open it in My Bets
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
+            </form>
+          </div>
         ) : (
           <>
             {/* Count, mode badge and balance */}

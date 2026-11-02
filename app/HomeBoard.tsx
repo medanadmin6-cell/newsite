@@ -18,6 +18,7 @@ import {
 import { Page } from "@/components/Shell";
 import { MatchList } from "@/components/MatchList";
 import { BetSlip } from "@/components/BetSlip";
+import { LoadCodeWidget } from "@/components/home/Panels";
 import { SupportChat } from "@/components/SupportChat";
 import { useSlip, type SlipLeg } from "@/lib/store";
 import type { FeedMatch } from "@/lib/fixtures";
@@ -146,6 +147,8 @@ export function HomeBoard() {
             </Link>
           ))}
         </div>
+
+        <LoadCodeWidget />
 
         <section>
           <div className="mb-2 flex items-center justify-between">
