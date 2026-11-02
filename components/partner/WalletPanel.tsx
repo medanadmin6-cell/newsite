@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { Wallet, ArrowRight, Banknote } from "lucide-react";
 import { useSession } from "@/lib/store";
 import { allCountries, DEFAULT_COUNTRY, getCountry, formatMoney } from "@/lib/countries";
-import { depositsInCedis } from "@/lib/fx";
-
 /**
  * The partner's own betting account.
  *
@@ -145,7 +143,7 @@ export function WalletPanel({
               >
                 {allCountries().map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.name} · {depositsInCedis(c.code) ? "USD" : c.currency}
+                    {c.name} · {c.currency}
                   </option>
                 ))}
               </select>

@@ -22,6 +22,7 @@ import { Page } from "@/components/Shell";
 import { SupportChat } from "@/components/SupportChat";
 import { useSession } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { toDisplayAmount } from "@/lib/fx";
 import { standing, maskPhone } from "@/lib/tiers";
 
 interface MeResponse {
@@ -128,7 +129,10 @@ function AccountView() {
             <div>
               <p className="text-[12px] text-white/75">Wallet</p>
               <p className="text-[32px] font-black leading-none">
-                {hidden ? "••••••" : formatMoney(balance, player.currency)}
+                {hidden ? "••••••" : formatMoney(
+                  toDisplayAmount(player.country_code, player.currency, balance).amount,
+                  toDisplayAmount(player.country_code, player.currency, balance).currency,
+                )}
               </p>
             </div>
             <button

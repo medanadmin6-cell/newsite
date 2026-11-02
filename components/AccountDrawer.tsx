@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useSession } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { toDisplayAmount } from "@/lib/fx";
 
 /**
  * The account panel that drops from the header.
@@ -127,7 +128,12 @@ export function AccountDrawer({ open, onClose }: { open: boolean; onClose: () =>
               <div>
                 <p className="text-[12px] text-white/80">Total Balance</p>
                 <p className="mt-0.5 text-[26px] font-black leading-none text-white">
-                  {hidden ? "••••••" : formatMoney(balance, player.currency)}
+                  {hidden
+                    ? "••••••"
+                    : formatMoney(
+                        toDisplayAmount(player.country_code, player.currency, balance).amount,
+                        toDisplayAmount(player.country_code, player.currency, balance).currency,
+                      )}
                 </p>
               </div>
               <div className="flex items-center gap-3 text-white">
@@ -147,7 +153,12 @@ export function AccountDrawer({ open, onClose }: { open: boolean; onClose: () =>
             <div className="mt-3">
               <p className="text-[12px] text-white/80">Withdrawable Balance</p>
               <p className="mt-0.5 text-[20px] font-black leading-none text-white">
-                {hidden ? "••••" : formatMoney(withdrawable, player.currency)}
+                {hidden
+                  ? "••••"
+                  : formatMoney(
+                      toDisplayAmount(player.country_code, player.currency, withdrawable).amount,
+                      toDisplayAmount(player.country_code, player.currency, withdrawable).currency,
+                    )}
               </p>
               {summary && !summary.unlocked && (
                 <p className="mt-1 text-[11px] text-[var(--pending)]">{summary.gateLabel}</p>

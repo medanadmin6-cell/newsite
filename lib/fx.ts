@@ -33,9 +33,40 @@ export function usdToGhs(usd: number, rate = ghsPerUsd()): number {
   return roundMoney(usd * rate);
 }
 
-/** A Ghana account is shown and stored in dollars. Cedis exist only at the rail. */
+/** Ghana mobile money is collected in cedis. The wallet itself is stored in dollars. */
 export function depositsInCedis(countryCode: string | null | undefined): boolean {
   return String(countryCode ?? "").toUpperCase() === "GH";
+}
+
+/** A Ghana dollar-wallet should be shown to the player in cedis. */
+export function walletShowsCedis(
+  countryCode: string | null | undefined,
+  currency: string | null | undefined,
+): boolean {
+  return depositsInCedis(countryCode) && String(currency ?? "USD").toUpperCase() === "USD";
+}
+
+/** Player-facing amount. Ghana dollar balances become cedis; every other wallet is unchanged. */
+export function toDisplayAmount(
+  countryCode: string | null | undefined,
+  currency: string | null | undefined,
+  amount: number,
+): { currency: string; amount: number } {
+  if (walletShowsCedis(countryCode, currency)) {
+    return { currency: "GHS", amount: usdToGhs(amount) };
+  }
+  if (depositsInCedis(countryCode)) return { currency: "GHS", amount };
+  return { currency: currency || "USD", amount };
+}
+
+/** The wallet amount for a figure the player typed in cedis. */
+export function toWalletAmount(
+  countryCode: string | null | undefined,
+  currency: string | null | undefined,
+  amount: number,
+): number {
+  if (walletShowsCedis(countryCode, currency)) return ghsToUsd(amount);
+  return amount;
 }
 
 /**

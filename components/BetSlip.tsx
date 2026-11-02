@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Trash2, Settings, CircleHelp } from "lucide-react";
 import { useSlip, useSession, type SlipMode, type SlipLeg } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { toDisplayAmount, toWalletAmount } from "@/lib/fx";
 import { BallIcon } from "@/components/icons";
 import { BookedCode } from "@/components/BookedCode";
 import { PlacedReceipt, type PlacedTicket } from "@/components/PlacedReceipt";
@@ -73,7 +74,8 @@ export function BetSlip() {
   const [booked, setBooked] = useState<{ code: string; expiresAt: string | null } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const currency = player?.currency ?? "USD";
+  const shown = toDisplayAmount(player?.country_code, player?.currency, 0);
+  const currency = player ? shown.currency : "USD";
   const oddsPerLeg = useMemo(() => legs.map((l) => l.odds), [legs]);
 
   // What this slip becomes, and what it costs.
@@ -123,7 +125,7 @@ export function BetSlip() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: player.id,
-          stake,
+          stake: toWalletAmount(player.country_code, player.currency, stake),
           mode,
           systemSize: maths.size,
           acceptOddsChanges,
@@ -232,7 +234,10 @@ export function BetSlip() {
                 </span>
               </span>
               <span className="ml-auto text-[15px] font-black text-[var(--pending)]">
-                {formatMoney(Number(player?.balance ?? 0), currency)}
+                {formatMoney(
+                  toDisplayAmount(player.country_code, player.currency, Number(player.balance ?? 0)).amount,
+                  currency,
+                )}
               </span>
             </div>
 

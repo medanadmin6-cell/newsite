@@ -8,6 +8,7 @@ import { useSession, useSlip } from "@/lib/store";
 import { WinCelebration, hasCelebrated, markCelebrated } from "@/components/WinCelebration";
 import { AccountDrawer } from "@/components/AccountDrawer";
 import { formatMoney } from "@/lib/countries";
+import { toDisplayAmount } from "@/lib/fx";
 
 /**
  * Betvanta shell.
@@ -98,7 +99,10 @@ function HeaderActions({ onOpenAccount }: { onOpenAccount: () => void }) {
 
   if (!hydrated) return <div className="h-7 w-24 rounded-full bg-[var(--surface-2)]" />;
 
-  const money = player ? formatMoney(Number(player.balance), player.currency) : formatMoney(0, "USD");
+  const shown = player
+    ? toDisplayAmount(player.country_code, player.currency, Number(player.balance))
+    : { amount: 0, currency: "USD" };
+  const money = formatMoney(shown.amount, shown.currency);
 
   return (
     <>

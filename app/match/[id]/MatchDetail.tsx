@@ -12,6 +12,7 @@ import { BetSlip } from "@/components/BetSlip";
 import { SlipButton } from "@/components/Shell";
 import { useSlip, useSession, type SlipLeg } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { toDisplayAmount } from "@/lib/fx";
 import type { FeedMatch } from "@/lib/fixtures";
 import type { Market, MarketGroup } from "@/lib/odds";
 import { MARKET_FILTERS } from "@/lib/markets";
@@ -419,7 +420,10 @@ function SlipBar() {
             {totalOdds().toFixed(2)}
             {player && (
               <span className="ml-2 text-[12px] font-normal text-[var(--text-muted)]">
-                bal {formatMoney(Number(player.balance), player.currency)}
+                bal {formatMoney(
+                  toDisplayAmount(player.country_code, player.currency, Number(player.balance)).amount,
+                  toDisplayAmount(player.country_code, player.currency, Number(player.balance)).currency,
+                )}
               </span>
             )}
           </p>
