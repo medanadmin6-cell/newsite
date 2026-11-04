@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { asRow, db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
-import { depositsInCedis, ghsPerUsd, usdToGhs } from "@/lib/fx";
+import { depositsInCedis, ghsPerUsd, toDisplayAmount, usdToGhs } from "@/lib/fx";
 import { checkWithdrawalGate, type GateSubject } from "@/lib/withdrawals";
 
 interface WithdrawUser extends GateSubject {
@@ -166,7 +166,8 @@ export async function POST(req: Request) {
       }
 
       if (exempt) {
-        await sendSms(user.phone, withdrawalRequestedSms(amount, user.currency)).catch(() => {});
+        const notice = toDisplayAmount(user.country_code, user.currency, amount);
+        await sendSms(user.phone, withdrawalRequestedSms(notice.amount, notice.currency)).catch(() => {});
       }
 
       return NextResponse.json({
@@ -235,7 +236,8 @@ export async function POST(req: Request) {
   }
 
   if (exempt) {
-    await sendSms(user.phone, withdrawalRequestedSms(amount, user.currency)).catch(() => {});
+    const notice = toDisplayAmount(user.country_code, user.currency, amount);
+    await sendSms(user.phone, withdrawalRequestedSms(notice.amount, notice.currency)).catch(() => {});
   }
 
   return NextResponse.json({

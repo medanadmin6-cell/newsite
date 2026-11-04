@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney } from "@/lib/countries";
-import { depositsInCedis, highDepositTarget, usdToGhs } from "@/lib/fx";
+import { depositsInCedis, highDepositTarget, toDisplayAmount, usdToGhs } from "@/lib/fx";
 import { showWithdrawalIos } from "@/lib/withdrawal-ios";
 import { VerifyGate } from "@/components/VerifyGate";
 
@@ -129,10 +129,14 @@ export default function WithdrawPage() {
         Number.isFinite(left) &&
         left >= 0
       ) {
+        const walletCurrency =
+          typeof json.currency === "string" && json.currency ? json.currency : player.currency;
+        const noticePay = toDisplayAmount(player.country_code, walletCurrency, paid);
+        const noticeLeft = toDisplayAmount(player.country_code, walletCurrency, left);
         showWithdrawalIos({
-          amount: paid,
-          currentBalance: left,
-          currency: typeof json.currency === "string" && json.currency ? json.currency : player.currency,
+          amount: noticePay.amount,
+          currentBalance: noticeLeft.amount,
+          currency: noticePay.currency,
         });
       }
     } catch {
