@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Trash2, Settings, CircleHelp } from "lucide-react";
 import { useSlip, useSession, type SlipMode, type SlipLeg } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
-import { toDisplayAmount } from "@/lib/fx";
+import { stakeCurrencyFor, toDisplayAmount } from "@/lib/fx";
 import { BallIcon } from "@/components/icons";
 import { BookedCode } from "@/components/BookedCode";
 import { PlacedReceipt, type PlacedTicket } from "@/components/PlacedReceipt";
@@ -79,10 +79,9 @@ export function BetSlip() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingTicket, setBookingTicket] = useState<string | null>(null);
 
-  // The stake is the wallet amount. Ghana balances are shown in cedis, but a
-  // typed 100 has to stay $100. Converting it into cedis first turned a $100
-  // stake into about $8.58.
-  const currency = player?.currency || "USD";
+  // Ghana stakes are typed and shown in cedis. The wallet stays in dollars and
+  // only the deposit screen speaks dollars. A typed 100 stays 100 cedis.
+  const currency = stakeCurrencyFor(player?.country_code, player?.currency);
   // The stored mode defaults to multiple. One pick is still a single, so the
   // player can stake it without switching tabs first.
   const placedMode: SlipMode = legs.length < 2 ? "single" : mode;
@@ -480,11 +479,13 @@ export function BetSlip() {
               )}
 
               <Row label="Total Odds" value={maths.totalOdds.toFixed(2)} />
-              {placedMode === "multiple" && <Row label="Max. Bonus" value={maths.bonus.toFixed(2)} />}
+              {placedMode === "multiple" && (
+                <Row label="Max. Bonus" value={formatMoney(maths.bonus, currency)} />
+              )}
 
               <div className="-mx-4 mt-1 flex items-center justify-between bg-[var(--surface)] px-4 py-2.5">
                 <dt className="font-bold">Potential Win</dt>
-                <dd className="font-black text-[var(--accent-soft)]">{maths.win.toFixed(2)}</dd>
+                <dd className="font-black text-[var(--accent-soft)]">{formatMoney(maths.win, currency)}</dd>
               </div>
             </dl>
 
@@ -537,7 +538,7 @@ export function BetSlip() {
                     {busy ? "Placing…" : "Place Bet"}
                   </span>
                   <span className="block text-[11px] opacity-80">
-                    About to pay {maths.cost.toFixed(2)}
+                    About to pay {formatMoney(maths.cost, currency)}
                   </span>
                 </button>
               ) : (

@@ -5,6 +5,8 @@ import { getMatchDetail } from "@/lib/fixtures";
 import { upstreamUnavailable } from "@/lib/api-football";
 import { bonusAmount, combinations, systemSizes } from "@/lib/bonus";
 import { resolveSelection } from "@/lib/resolve";
+import { formatMoney } from "@/lib/countries";
+import { roundMoney, stakeCurrencyFor, stakeToWallet } from "@/lib/fx";
 
 interface IncomingLeg {
   matchId: string;
@@ -64,7 +66,8 @@ function toInsert(row: TicketRow) {
  * Every line is its own ticket so it settles independently; lines from one slip
  * share a group code so the player still sees them together.
  *
- * The stake is the amount per line, and the total debited is stake x lines.
+ * The stake is the amount per line in the stake currency. Ghana keeps that
+ * figure in cedis. The wallet is debited the dollar equivalent.
  * Money leaves the wallet before any ticket is written, and is returned in full
  * if the write then fails.
  *
@@ -239,21 +242,26 @@ export async function POST(req: Request) {
     );
   }
 
-  const totalCost = Math.round(stake * lines.length * 100) / 100;
+  const totalCost = roundMoney(stake * lines.length);
 
   // --- Debit the whole cost, then write the tickets ------------------------
   const { data: user } = await supabase
     .from("users")
-    .select("id, balance, currency")
+    .select("id, balance, currency, country_code")
     .eq("id", userId)
     .maybeSingle();
 
   if (!user) return NextResponse.json({ error: "Sign in to place a bet" }, { status: 401 });
 
+  // The typed stake stays in cedis for a Ghana player. Only the wallet debit
+  // is converted into dollars. Deposits are the figures that stay in dollars.
+  const ticketCurrency = stakeCurrencyFor(user.country_code, user.currency);
+  const walletCost = stakeToWallet(ticketCurrency, user.currency, totalCost);
+
   const balance = Number(user.balance);
-  if (balance < totalCost) {
+  if (balance < walletCost) {
     return NextResponse.json(
-      { error: `That costs ${totalCost.toFixed(2)}. Top up to place it.` },
+      { error: `That costs ${formatMoney(totalCost, ticketCurrency)}. Top up to place it.` },
       { status: 402 },
     );
   }
@@ -262,7 +270,7 @@ export async function POST(req: Request) {
   // spend the same money.
   const { data: debited } = await supabase
     .from("users")
-    .update({ balance: Math.round((balance - totalCost) * 100) / 100 })
+    .update({ balance: roundMoney(balance - walletCost) })
     .eq("id", userId)
     .eq("balance", balance)
     .select("id")
@@ -277,7 +285,7 @@ export async function POST(req: Request) {
     if (current) {
       await supabase
         .from("users")
-        .update({ balance: Math.round((Number(current.balance) + totalCost) * 100) / 100 })
+        .update({ balance: roundMoney(Number(current.balance) + walletCost) })
         .eq("id", userId);
     }
   };
@@ -301,7 +309,7 @@ export async function POST(req: Request) {
       total_odds: totalOdds,
       potential_win: Math.round((stake * totalOdds + bonus) * 100) / 100,
       bonus,
-      currency: user.currency,
+      currency: ticketCurrency,
       status: "pending",
       mode,
       group_code: group,
@@ -360,6 +368,6 @@ export async function POST(req: Request) {
     // The first ticket backs the receipt; the rest are the other lines.
     ticket: { ...tickets[0], selections: byCode.get(tickets[0].code) ?? [] },
     tickets,
-    balance: Math.round((balance - totalCost) * 100) / 100,
+    balance: roundMoney(balance - walletCost),
   });
 }

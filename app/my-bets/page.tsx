@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { toDisplayAmount } from "@/lib/fx";
 import { WinCelebration, hasCelebrated, markCelebrated } from "@/components/WinCelebration";
 
 interface Leg {
@@ -84,7 +85,12 @@ export default function MyBetsPage() {
   const shown = tickets?.filter((t) => filter === "all" || t.status === filter) ?? null;
   const openCount = tickets?.filter((t) => t.status === "pending").length ?? 0;
   const wonCount = tickets?.filter((t) => t.status === "won").length ?? 0;
-  const staked = tickets?.reduce((sum, t) => sum + Number(t.stake), 0) ?? 0;
+  const staked =
+    tickets?.reduce(
+      (sum, t) => sum + toDisplayAmount(player.country_code, t.currency, Number(t.stake)).amount,
+      0,
+    ) ?? 0;
+  const stakedCurrency = toDisplayAmount(player.country_code, player.currency, 0).currency;
 
   return (
     <Page>
@@ -97,7 +103,7 @@ export default function MyBetsPage() {
         <div className="mt-3 grid grid-cols-3 gap-2">
           <Stat label="Open" value={tickets ? String(openCount) : "—"} tone="blue" />
           <Stat label="Won" value={tickets ? String(wonCount) : "—"} tone="green" />
-          <Stat label="Staked" value={tickets ? formatMoney(staked, player.currency) : "—"} tone="gold" />
+          <Stat label="Staked" value={tickets ? formatMoney(staked, stakedCurrency) : "—"} tone="gold" />
         </div>
 
         <div className="scroll-x mt-3 flex gap-1.5">
@@ -128,15 +134,29 @@ export default function MyBetsPage() {
             No tickets here yet.
           </p>
         ) : (
-          shown.map((t) => <TicketCard key={t.id} ticket={t} onCelebrate={setCelebrating} />)
+          shown.map((t) => (
+            <TicketCard key={t.id} ticket={t} countryCode={player.country_code} onCelebrate={setCelebrating} />
+          ))
         )}
       </div>
 
       {celebrating && (
         <WinCelebration
           code={celebrating.code}
-          amount={Number(celebrating.payout ?? celebrating.potential_win)}
-          currency={celebrating.currency}
+          amount={
+            toDisplayAmount(
+              player.country_code,
+              celebrating.currency,
+              Number(celebrating.payout ?? celebrating.potential_win),
+            ).amount
+          }
+          currency={
+            toDisplayAmount(
+              player.country_code,
+              celebrating.currency,
+              Number(celebrating.payout ?? celebrating.potential_win),
+            ).currency
+          }
           onClose={() => setCelebrating(null)}
         />
       )}
@@ -190,7 +210,21 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: "blu
   );
 }
 
-function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: Ticket) => void }) {
+function TicketCard({
+  ticket,
+  countryCode,
+  onCelebrate,
+}: {
+  ticket: Ticket;
+  countryCode: string;
+  onCelebrate: (t: Ticket) => void;
+}) {
+  const stake = toDisplayAmount(countryCode, ticket.currency, Number(ticket.stake));
+  const back = toDisplayAmount(
+    countryCode,
+    ticket.currency,
+    Number(ticket.payout ?? ticket.potential_win),
+  );
   const [open, setOpen] = useState(false);
   const style = STATUS_STYLE[ticket.status] ?? STATUS_STYLE.pending;
 
@@ -219,7 +253,7 @@ function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: 
         <dl className="mt-3 grid grid-cols-3 gap-2 text-[12px]">
           <div className="rounded-xl bg-[var(--surface-2)] px-2 py-1.5">
             <dt className="text-[10px] text-[var(--text-faint)]">Stake</dt>
-            <dd className="font-bold">{formatMoney(Number(ticket.stake), ticket.currency)}</dd>
+            <dd className="font-bold">{formatMoney(stake.amount, stake.currency)}</dd>
           </div>
           <div className="rounded-xl bg-[#fff7e6] px-2 py-1.5">
             <dt className="text-[10px] text-[var(--text-faint)]">Odds</dt>
@@ -230,7 +264,7 @@ function TicketCard({ ticket, onCelebrate }: { ticket: Ticket; onCelebrate: (t: 
               {ticket.status === "won" ? "Paid" : "Return"}
             </dt>
             <dd className="font-bold" style={{ color: style.fg }}>
-              {formatMoney(Number(ticket.payout ?? ticket.potential_win), ticket.currency)}
+              {formatMoney(back.amount, back.currency)}
             </dd>
           </div>
         </dl>

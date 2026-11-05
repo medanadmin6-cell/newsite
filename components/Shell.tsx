@@ -301,10 +301,15 @@ function WinAnnounce() {
             b.status === "won" && !hasCelebrated(b.code),
         );
         if (fresh && markCelebrated(fresh.code)) {
+          const shown = toDisplayAmount(
+            player?.country_code,
+            fresh.currency,
+            Number(fresh.payout ?? fresh.potential_win),
+          );
           setWin({
             code: fresh.code,
-            amount: Number(fresh.payout ?? fresh.potential_win),
-            currency: fresh.currency,
+            amount: shown.amount,
+            currency: shown.currency,
           });
         }
       })

@@ -70,6 +70,31 @@ export function toWalletAmount(
 }
 
 /**
+ * The currency a stake is typed and stored in.
+ * Ghana stakes stay in cedis. Deposits are the only figures kept in dollars.
+ */
+export function stakeCurrencyFor(
+  countryCode: string | null | undefined,
+  walletCurrency: string | null | undefined,
+): string {
+  if (walletShowsCedis(countryCode, walletCurrency)) return "GHS";
+  return String(walletCurrency || "USD").toUpperCase();
+}
+
+/** What a stake-currency figure is worth in the wallet. Cedis become dollars; every other stake is already wallet money. */
+export function stakeToWallet(
+  stakeCurrency: string,
+  walletCurrency: string | null | undefined,
+  amount: number,
+): number {
+  const wallet = String(walletCurrency || "USD").toUpperCase();
+  if (String(stakeCurrency).toUpperCase() === "GHS" && wallet === "USD") {
+    return ghsToUsd(amount);
+  }
+  return roundMoney(amount);
+}
+
+/**
  * How much has to land in the wallet before the bonus is claimed.
  * Dollar wallets share one target. Other markets use one high total instead of
  * a count of separate deposits.

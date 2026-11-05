@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { stakeCurrencyFor, toDisplayAmount } from "@/lib/fx";
 
 type LeagueId = "england" | "spain" | "germany" | "italy" | "champions";
 type MainMarket = "1x2" | "1up" | "2up";
@@ -705,7 +706,11 @@ export default function VirtualsPage() {
                   Returned {formatMoney(played.payout, played.currency)}
                 </p>
                 <p className="mt-1 text-[13px] font-bold text-[var(--text-muted)]">
-                  Balance {formatMoney(played.balance, played.currency)}
+                  Balance{" "}
+                  {formatMoney(
+                    toDisplayAmount(player?.country_code, player?.currency, played.balance).amount,
+                    toDisplayAmount(player?.country_code, player?.currency, played.balance).currency,
+                  )}
                 </p>
                 <ul className="mt-3 space-y-1 text-left">
                   {played.tickets.map((ticket) => (
@@ -797,7 +802,9 @@ export default function VirtualsPage() {
                     </div>
                     <div className="mt-1.5 flex items-center gap-2">
                       <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-1.5">
-                        <span className="text-[11px] font-bold text-[var(--text-muted)]">{player.currency}</span>
+                        <span className="text-[11px] font-bold text-[var(--text-muted)]">
+                          {stakeCurrencyFor(player.country_code, player.currency)}
+                        </span>
                         <input
                           type="number"
                           inputMode="decimal"
@@ -818,7 +825,7 @@ export default function VirtualsPage() {
                         Returns{" "}
                         {formatMoney(
                           Number.isFinite(pick.stake) ? roundMoney(pick.stake * pick.odds) : 0,
-                          player.currency,
+                          stakeCurrencyFor(player.country_code, player.currency),
                         )}
                       </span>
                     </div>
@@ -858,11 +865,15 @@ export default function VirtualsPage() {
             </div>
             <p className="mt-3 flex items-center justify-between text-[13px]">
               <span className="font-bold text-[var(--text-muted)]">Total stake</span>
-              <span className="font-black text-[var(--text-bright)]">{formatMoney(totalStake, player.currency)}</span>
+              <span className="font-black text-[var(--text-bright)]">
+                {formatMoney(totalStake, stakeCurrencyFor(player.country_code, player.currency))}
+              </span>
             </p>
             <p className="mt-1 flex items-center justify-between text-[13px]">
               <span className="font-bold text-[var(--text-muted)]">Potential return</span>
-              <span className="font-black text-[var(--text-bright)]">{formatMoney(roundMoney(potential), player.currency)}</span>
+              <span className="font-black text-[var(--text-bright)]">
+                {formatMoney(roundMoney(potential), stakeCurrencyFor(player.country_code, player.currency))}
+              </span>
             </p>
             {error && (
               <p className="mt-2 rounded-xl bg-[var(--lose-bg)] px-3 py-2 text-[12px] font-bold text-[var(--lose)]">{error}</p>

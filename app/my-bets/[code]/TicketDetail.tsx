@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useSlip, useSession, type SlipLeg } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { toDisplayAmount } from "@/lib/fx";
 import { marketName } from "@/lib/markets";
 
 /**
@@ -67,6 +68,11 @@ interface Payload {
   owner: { name: string | null };
   selections: Leg[];
   cashout: { available: boolean; amount: number; potential: number; reason?: string };
+}
+
+function shownMoney(country: string | null | undefined, currency: string, amount: number) {
+  const shown = toDisplayAmount(country, currency, amount);
+  return formatMoney(shown.amount, shown.currency);
 }
 
 const STATUS: Record<string, { label: string; colour: string }> = {
@@ -149,7 +155,7 @@ export function TicketDetail({ code }: { code: string }) {
         if (json.moved) reload();
         return;
       }
-      setNote(`Cashed out for ${formatMoney(json.amount, data.bet.currency)}.`);
+      setNote(`Cashed out for ${shownMoney(player.country_code, data.bet.currency, json.amount)}.`);
       if (typeof json.balance === "number") setBalance(json.balance);
       reload();
     } catch {
@@ -162,7 +168,7 @@ export function TicketDetail({ code }: { code: string }) {
   /** Share the win, falling back to the clipboard where there is no share sheet. */
   const showOff = async () => {
     if (!data) return;
-    const amount = formatMoney(Number(data.bet.payout ?? 0), data.bet.currency);
+    const amount = shownMoney(player?.country_code, data.bet.currency, Number(data.bet.payout ?? 0));
     const text = `I just won ${amount} on Betvanta. Ticket ${data.bet.code}.`;
     const url = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -324,20 +330,30 @@ export function TicketDetail({ code }: { code: string }) {
             className="text-[27px] font-black leading-tight"
             style={{ color: won ? "var(--win)" : "var(--text-bright)" }}
           >
-            {formatMoney(
-              settled ? Number(bet.payout ?? 0) : Number(bet.potential_win),
+            {shownMoney(
+              player.country_code,
               bet.currency,
+              settled ? Number(bet.payout ?? 0) : Number(bet.potential_win),
             )}
           </p>
         </div>
 
         <dl className="mx-auto mt-3 max-w-2xl space-y-1.5 border-t border-[var(--line)] pt-3 text-[14px]">
-          <Line label="Total Stake" value={Number(bet.stake).toFixed(2)} />
+          <Line label="Total Stake" value={shownMoney(player.country_code, bet.currency, Number(bet.stake))} />
           <Line label="Total Odds" value={Number(bet.total_odds).toFixed(2)} />
           {Number(bet.bonus) > 0 && (
-            <Line label="Max. Bonus" value={Number(bet.bonus).toFixed(2)} accent />
+            <Line
+              label="Max. Bonus"
+              value={shownMoney(player.country_code, bet.currency, Number(bet.bonus))}
+              accent
+            />
           )}
-          {!settled && <Line label="To Return" value={Number(bet.potential_win).toFixed(2)} />}
+          {!settled && (
+            <Line
+              label="To Return"
+              value={shownMoney(player.country_code, bet.currency, Number(bet.potential_win))}
+            />
+          )}
         </dl>
 
         {/* Congratulations, on a won ticket only. */}
@@ -421,7 +437,7 @@ export function TicketDetail({ code }: { code: string }) {
             style={{ background: "var(--accent)" }}
           >
             {offer.available
-              ? `Cash Out ${formatMoney(offer.amount, bet.currency)}`
+              ? `Cash Out ${shownMoney(player.country_code, bet.currency, offer.amount)}`
               : "Cash Out"}
           </button>
         </div>

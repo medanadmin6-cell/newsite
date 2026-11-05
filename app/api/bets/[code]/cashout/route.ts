@@ -4,6 +4,7 @@ import { getMatchDetail } from "@/lib/fixtures";
 import { resolveSelection } from "@/lib/resolve";
 import { cashoutOffer, refusalMessage, type CashoutLeg } from "@/lib/cashout";
 import { cashoutEnabled } from "@/lib/schema";
+import { roundMoney, stakeToWallet } from "@/lib/fx";
 
 /**
  * Accept a cashout.
@@ -115,12 +116,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ code: string }
 
   const { data: user } = await supabase
     .from("users")
-    .select("balance")
+    .select("balance, currency")
     .eq("id", userId)
     .single();
 
   const balance = Number(user?.balance ?? 0);
-  const next = Math.round((balance + offer.amount) * 100) / 100;
+  // The offer stays in the ticket currency (cedis for Ghana). The wallet
+  // receives the dollar equivalent.
+  const credit = stakeToWallet(String(bet.currency ?? ""), String(user?.currency ?? "USD"), offer.amount);
+  const next = roundMoney(balance + credit);
 
   const { error: creditErr } = await supabase
     .from("users")

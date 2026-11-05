@@ -2,6 +2,7 @@ import { db } from "./supabase";
 import { matchClock, scoreFromTimeline } from "./clock";
 import { fetchResults, attachCorners, type MatchResult } from "./results";
 import { judge, CORNER_MARKETS } from "./judge";
+import { roundMoney, stakeToWallet } from "./fx";
 
 /**
  * Automatic settlement.
@@ -164,7 +165,7 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
         .maybeSingle();
 
       if (transitioned) {
-        await creditWinnings(ticket.user_id, payout);
+        await creditWinnings(ticket.user_id, payout, String(ticket.currency ?? ""));
         report.won++;
       }
       continue;
@@ -290,15 +291,24 @@ async function resolveResults(matchIds: string[]): Promise<Resolved> {
   return out;
 }
 
-async function creditWinnings(userId: string, payout: number): Promise<void> {
+async function creditWinnings(userId: string, payout: number, ticketCurrency: string): Promise<void> {
   const supabase = db();
   if (!supabase || !(payout > 0)) return;
 
-  const { data: user } = await supabase.from("users").select("balance").eq("id", userId).single();
+  const { data: user } = await supabase
+    .from("users")
+    .select("balance, currency")
+    .eq("id", userId)
+    .single();
   if (!user) return;
+
+  // A cedi ticket pays the dollar wallet the converted amount. The ticket
+  // itself keeps the cedi figure the player staked.
+  const credit = stakeToWallet(ticketCurrency, String(user.currency ?? "USD"), payout);
+  if (!(credit > 0)) return;
 
   await supabase
     .from("users")
-    .update({ balance: Number(user.balance) + payout })
+    .update({ balance: roundMoney(Number(user.balance) + credit) })
     .eq("id", userId);
 }
