@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Trash2, Settings, CircleHelp } from "lucide-react";
 import { useSlip, useSession, type SlipMode, type SlipLeg } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
-import { toDisplayAmount, toWalletAmount } from "@/lib/fx";
+import { toDisplayAmount } from "@/lib/fx";
 import { BallIcon } from "@/components/icons";
 import { BookedCode } from "@/components/BookedCode";
 import { PlacedReceipt, type PlacedTicket } from "@/components/PlacedReceipt";
@@ -79,8 +79,10 @@ export function BetSlip() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingTicket, setBookingTicket] = useState<string | null>(null);
 
-  const shown = toDisplayAmount(player?.country_code, player?.currency, 0);
-  const currency = player ? shown.currency : "USD";
+  // The stake is the wallet amount. Ghana balances are shown in cedis, but a
+  // typed 100 has to stay $100. Converting it into cedis first turned a $100
+  // stake into about $8.58.
+  const currency = player?.currency || "USD";
   // The stored mode defaults to multiple. One pick is still a single, so the
   // player can stake it without switching tabs first.
   const placedMode: SlipMode = legs.length < 2 ? "single" : mode;
@@ -133,7 +135,7 @@ export function BetSlip() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: player.id,
-          stake: toWalletAmount(player.country_code, player.currency, stake),
+          stake,
           mode: placedMode,
           systemSize: maths.size,
           acceptOddsChanges,
@@ -304,7 +306,7 @@ export function BetSlip() {
                 {player
                   ? formatMoney(
                       toDisplayAmount(player.country_code, player.currency, Number(player.balance ?? 0)).amount,
-                      currency,
+                      toDisplayAmount(player.country_code, player.currency, 0).currency,
                     )
                   : formatMoney(0, currency)}
               </span>
