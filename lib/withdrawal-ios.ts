@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-const SCRIPT_SRC = "/withdrawal-notification/withdrawal-notification.js";
+const SCRIPT_SRC = "/withdrawal-notification/withdrawal-notification.js?v=ghs";
 
 function loadNotificationScript(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();

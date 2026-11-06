@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney } from "@/lib/countries";
-import { depositsInCedis, highDepositTarget, toDisplayAmount, usdToGhs } from "@/lib/fx";
+import { depositsInCedis, highDepositTarget, toDisplayAmount, toWalletAmount } from "@/lib/fx";
 import { showWithdrawalIos } from "@/lib/withdrawal-ios";
 import { VerifyGate } from "@/components/VerifyGate";
 
@@ -32,7 +32,8 @@ export default function WithdrawPage() {
 
   const country = getCountry(player?.country_code);
   const cedis = depositsInCedis(player?.country_code);
-  const walletCurrency = cedis ? "USD" : (player?.currency ?? "USD");
+  const walletCurrency = player?.currency ?? "USD";
+  const shown = toDisplayAmount(player?.country_code, walletCurrency, Number(player?.balance ?? 0));
 
   useEffect(() => {
     if (hydrated && !player) router.replace("/login");
@@ -96,7 +97,13 @@ export default function WithdrawPage() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: player.id, amount, payoutNumber, payoutBank }),
+        body: JSON.stringify({
+          userId: player.id,
+          amount: toWalletAmount(player.country_code, player.currency, amount),
+          displayAmount: cedis ? amount : undefined,
+          payoutNumber,
+          payoutBank,
+        }),
       });
       const json = await res.json();
 
@@ -131,8 +138,12 @@ export default function WithdrawPage() {
       ) {
         const walletCurrency =
           typeof json.currency === "string" && json.currency ? json.currency : player.currency;
-        const noticePay = toDisplayAmount(player.country_code, walletCurrency, paid);
         const noticeLeft = toDisplayAmount(player.country_code, walletCurrency, left);
+        // Ghana types the cedis they want sent. The message repeats that
+        // figure, not the dollar amount the wallet was charged.
+        const noticePay = cedis
+          ? { currency: "GHS", amount }
+          : toDisplayAmount(player.country_code, walletCurrency, paid);
         showWithdrawalIos({
           amount: noticePay.amount,
           currentBalance: noticeLeft.amount,
@@ -178,7 +189,7 @@ export default function WithdrawPage() {
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <p className="text-[11px] uppercase tracking-wide text-[var(--text-faint)]">Available</p>
           <p className="text-[26px] font-black text-[var(--accent)]">
-            {formatMoney(Number(player.balance), walletCurrency)}
+            {formatMoney(shown.amount, shown.currency)}
           </p>
         </div>
         )}
@@ -187,7 +198,7 @@ export default function WithdrawPage() {
         <form onSubmit={submit} className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">
-              Amount ({walletCurrency})
+              Amount ({shown.currency})
             </span>
             <input
               type="number"
@@ -197,11 +208,6 @@ export default function WithdrawPage() {
               onChange={(e) => setAmount(Number(e.target.value))}
               className="w-full rounded bg-[var(--surface-2)] px-3 py-3 text-[20px] font-black outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
-            {cedis && amount > 0 && (
-              <span className="mt-1 block text-[12px] font-medium normal-case tracking-normal text-[var(--text-muted)]">
-                Sent to your mobile money as {formatMoney(usdToGhs(amount), "GHS")}.
-              </span>
-            )}
           </label>
 
           <label className="block">

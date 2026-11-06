@@ -7,6 +7,8 @@
  * than guessing. A wrong settlement moves real money.
  */
 
+import { matchClock } from "./clock";
+
 const BASE = "https://v3.football.api-sports.io";
 const TTL_MS = 5 * 60_000;
 
@@ -54,7 +56,7 @@ async function call<T>(path: string): Promise<T | null> {
 const SETTLED = new Set(["FT", "AET", "PEN"]);
 
 interface RawFixture {
-  fixture: { id: number; status: { short: string } };
+  fixture: { id: number; date?: string; status: { short: string } };
   goals: { home: number | null; away: number | null };
   score: {
     halftime: { home: number | null; away: number | null };
@@ -87,9 +89,14 @@ export async function fetchResults(ids: string[]): Promise<Map<string, MatchResu
       const id = String(f.fixture.id);
       const status = f.fixture.status.short;
 
-      // Only a normal finish settles. Abandoned, cancelled and postponed
-      // fixtures are the operator's call, not ours.
-      if (!SETTLED.has(status)) continue;
+      // A normal finish settles. So does a match the feed has actually
+      // started, once the kickoff clock reaches full time, so a status that
+      // never flips to FT does not leave the ticket open. A fixture still
+      // marked "not started" is left alone — its score is not real yet.
+      const clockOver = Boolean(f.fixture.date) && matchClock(f.fixture.date).isOver;
+      const started = status !== "NS" && status !== "TBD" && status !== "PST";
+      const blocked = status === "PST" || status === "CANC" || status === "ABD";
+      if (blocked || (!SETTLED.has(status) && !(clockOver && started))) continue;
 
       // Prefer the explicit full-time score; fall back to the goals block.
       const home = f.score?.fulltime?.home ?? f.goals?.home;

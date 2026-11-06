@@ -7,6 +7,7 @@ import { Page } from "@/components/Shell";
 import { useSession } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
 import { toDisplayAmount } from "@/lib/fx";
+import { matchClock } from "@/lib/clock";
 import { WinCelebration, hasCelebrated, markCelebrated } from "@/components/WinCelebration";
 
 interface Leg {
@@ -19,6 +20,7 @@ interface Leg {
   result: string;
   final_home: number | null;
   final_away: number | null;
+  kickoff?: string | null;
 }
 
 interface Ticket {
@@ -60,24 +62,35 @@ export default function MyBetsPage() {
 
   useEffect(() => {
     if (!player) return;
-    // Opening this screen settles this player's own tickets first.
-    fetch(`/api/bets/mine?userId=${player.id}`)
-      .then((r) => (r.ok ? r.json() : { bets: [] }))
-      .then((j) => {
-        const bets: Ticket[] = j.bets ?? [];
-        setTickets(bets);
+    let alive = true;
 
-        // This response is the freshest count there is — settlement ran on the
-        // way in — so it corrects the tab badge without waiting for the next
-        // balance poll to notice the tickets that just closed.
-        if (typeof j.openBets === "number") setOpenBets(j.openBets);
+    const pull = () => {
+      // Each read settles this player's tickets first, then returns the list.
+      // Repeating it is what lets a match that finishes while the page is open
+      // close on its own.
+      fetch(`/api/bets/mine?userId=${player.id}`)
+        .then((r) => (r.ok ? r.json() : { bets: [] }))
+        .then((j) => {
+          if (!alive) return;
+          const bets: Ticket[] = j.bets ?? [];
+          setTickets(bets);
 
-        // Announce a win once. Opening this screen is the moment the player
-        // finds out, and settlement has already run by the time it responds.
-        const fresh = bets.find((b) => b.status === "won" && !hasCelebrated(b.code));
-        if (fresh && markCelebrated(fresh.code)) setCelebrating(fresh);
-      })
-      .catch(() => setTickets([]));
+          if (typeof j.openBets === "number") setOpenBets(j.openBets);
+
+          const fresh = bets.find((b) => b.status === "won" && !hasCelebrated(b.code));
+          if (fresh && markCelebrated(fresh.code)) setCelebrating(fresh);
+        })
+        .catch(() => {
+          if (alive) setTickets((current) => current ?? []);
+        });
+    };
+
+    pull();
+    const timer = setInterval(pull, 30_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
   }, [player, setOpenBets]);
 
   if (!player) return null;
@@ -210,6 +223,16 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: "blu
   );
 }
 
+function liveLeg(ticket: Ticket): { label: string } | null {
+  if (ticket.status !== "pending") return null;
+  for (const leg of ticket.selections) {
+    if (!leg.kickoff || leg.result === "won" || leg.result === "lost") continue;
+    const clock = matchClock(leg.kickoff);
+    if (clock.isLive) return { label: clock.label };
+  }
+  return null;
+}
+
 function TicketCard({
   ticket,
   countryCode,
@@ -227,6 +250,7 @@ function TicketCard({
   );
   const [open, setOpen] = useState(false);
   const style = STATUS_STYLE[ticket.status] ?? STATUS_STYLE.pending;
+  const live = liveLeg(ticket);
 
   return (
     <article className="mt-3 overflow-hidden rounded-2xl bg-white text-[var(--text)] shadow-sm">
@@ -241,6 +265,14 @@ function TicketCard({
                 : "Ticket"}
               {ticket.selections.length > 1 ? ` +${ticket.selections.length - 1}` : ""}
             </p>
+            {live && (
+              <p className="mt-1 flex items-center gap-1.5">
+                <span className="rounded-sm bg-[var(--live)] px-1.5 py-px text-[9px] font-black text-white">
+                  LIVE
+                </span>
+                <span className="text-[11px] font-bold text-[var(--live)]">{live.label}</span>
+              </p>
+            )}
           </div>
           <span
             className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase"

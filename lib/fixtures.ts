@@ -145,6 +145,10 @@ async function loadUpstream(): Promise<FeedMatch[]> {
     const odds = oddsFor[i];
     for (const f of sources[i]) {
       if (isFinished(f.statusShort)) continue;
+      // Kickoff time, not the feed status, decides that a match has started
+      // and that it is over. A status that stays "not started" after the
+      // whistle would otherwise leave the game looking upcoming forever.
+      if (f.statusShort !== "PST" && matchClock(f.kickoff).isOver) continue;
       if (seen.has(f.id)) continue;
       seen.add(f.id);
 
@@ -165,7 +169,9 @@ function toFeedMatch(
   f: UpstreamFixture,
   priced: { home: number; draw: number; away: number },
 ): FeedMatch {
-  const live = isLiveStatus(f.statusShort);
+  const postponed = f.statusShort === "PST";
+  const clock = matchClock(f.kickoff);
+  const live = !postponed && (isLiveStatus(f.statusShort) || clock.isLive);
 
   return {
     id: f.id,
@@ -180,11 +186,10 @@ function toFeedMatch(
     kickoff: f.kickoff,
     isLive: live,
     isLocked: live, // Live betting is locked platform-wide.
-    postponed: f.statusShort === "PST",
-    // Only live state is labelled server-side. A kickoff time is left for
-    // the browser to format, so it shows in the player's own timezone
-    // rather than the host's.
-    minuteLabel: live ? (f.minute != null ? `${f.minute}'` : "LIVE") : "",
+    postponed,
+    // The clock is taken from kickoff so a started match shows LIVE even
+    // when the feed has not flipped its status yet.
+    minuteLabel: live ? (isLiveStatus(f.statusShort) && f.minute != null ? `${f.minute}'` : clock.label) : "",
     scoreHome: f.scoreHome,
     scoreAway: f.scoreAway,
     bestOdds: false,

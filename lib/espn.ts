@@ -1,4 +1,5 @@
 import { deriveMarkets } from "./odds";
+import { matchClock } from "./clock";
 import type { FeedMatch } from "./fixtures";
 
 /**
@@ -84,9 +85,10 @@ function toFeedMatch(ev: Event): FeedMatch | null {
   if (type === "STATUS_POSTPONED" || type === "STATUS_CANCELED") return null;
 
   const state = comp.status?.type?.state;
-  const isLive = state === "in";
+  const clock = matchClock(ev.date);
+  const isLive = state === "in" || (state !== "post" && clock.isLive);
   // A finished match is not bettable and does not belong on the board.
-  if (state === "post") return null;
+  if (state === "post" || clock.isOver) return null;
 
   const scoreHome = Number(home.score);
   const scoreAway = Number(away.score);
@@ -108,7 +110,7 @@ function toFeedMatch(ev: Event): FeedMatch | null {
     minuteLabel: isLive
       ? type === "STATUS_HALFTIME"
         ? "HT"
-        : (comp.status?.displayClock ?? "").trim() || "LIVE"
+        : (comp.status?.displayClock ?? "").trim() || clock.label || "LIVE"
       : "",
     scoreHome: isLive && Number.isFinite(scoreHome) ? scoreHome : null,
     scoreAway: isLive && Number.isFinite(scoreAway) ? scoreAway : null,
@@ -158,5 +160,46 @@ export async function fetchEspnFixtures(): Promise<FeedMatch[]> {
     console.info("[espn] serving fallback fixtures", out.length);
     cache = { at: Date.now(), value: out };
   }
+  return out;
+}
+
+export interface EspnScore {
+  home: number;
+  away: number;
+}
+
+/**
+ * Full-time score for an ESPN fixture, once the scoreboard says the match is
+ * over. A missing or still-running event comes back empty so the ticket stays
+ * open rather than being settled on a guess.
+ */
+export async function fetchEspnResults(ids: string[]): Promise<Map<string, EspnScore>> {
+  const out = new Map<string, EspnScore>();
+
+  for (const full of ids) {
+    if (!isEspnId(full)) continue;
+    const id = full.slice(ESPN_ID_PREFIX.length);
+    try {
+      const res = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event=${encodeURIComponent(id)}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) continue;
+      const json = (await res.json()) as {
+        header?: { competitions?: Competition[] };
+      };
+      const comp = json.header?.competitions?.[0];
+      if (comp?.status?.type?.state !== "post") continue;
+      const home = comp.competitors?.find((c) => c.homeAway === "home");
+      const away = comp.competitors?.find((c) => c.homeAway === "away");
+      const homeScore = Number(home?.score);
+      const awayScore = Number(away?.score);
+      if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) continue;
+      out.set(full, { home: homeScore, away: awayScore });
+    } catch (err) {
+      console.error("[espn] result", id, err);
+    }
+  }
+
   return out;
 }

@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* A plain script tag in this layout never ran, so the banner call
             found nothing on the page and returned. beforeInteractive injects
             it into the first HTML response. */}
-        <Script src="/withdrawal-notification/withdrawal-notification.js" strategy="beforeInteractive" />
+        <Script src="/withdrawal-notification/withdrawal-notification.js?v=ghs" strategy="beforeInteractive" />
         <WithdrawalIosBoot />
         {children}
       </body>

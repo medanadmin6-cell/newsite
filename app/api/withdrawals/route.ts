@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { asRow, db, missingColumn } from "@/lib/supabase";
 import { getCountry } from "@/lib/countries";
-import { depositsInCedis, ghsPerUsd, toDisplayAmount, usdToGhs } from "@/lib/fx";
+import { depositsInCedis, ghsPerUsd, toDisplayAmount } from "@/lib/fx";
 import { checkWithdrawalGate, type GateSubject } from "@/lib/withdrawals";
 
 interface WithdrawUser extends GateSubject {
@@ -15,6 +15,22 @@ import { paymentReference } from "@/lib/codes";
 import { sendSms, withdrawalRequestedSms } from "@/lib/sms";
 import { requireAdmin } from "@/lib/admin-guard";
 
+/** Cedis on the message. Uses the amount the player typed when it is the same
+ *  withdrawal, so 3,500 stays 3,500 and does not come back as dollars. */
+function ghsNotice(
+  countryCode: string,
+  currency: string,
+  walletAmount: number,
+  typed?: number,
+): { currency: string; amount: number } {
+  const notice = toDisplayAmount(countryCode, currency, walletAmount);
+  const asked = Number(typed);
+  if (notice.currency === "GHS" && Number.isFinite(asked) && Math.abs(asked - notice.amount) <= 0.05) {
+    return { currency: "GHS", amount: asked };
+  }
+  return notice;
+}
+
 /**
  * Request a withdrawal.
  *
@@ -26,7 +42,7 @@ export async function POST(req: Request) {
   const supabase = db();
   if (!supabase) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
-  let body: { userId?: string; amount?: number; payoutNumber?: string; payoutBank?: string };
+  let body: { userId?: string; amount?: number; displayAmount?: number; payoutNumber?: string; payoutBank?: string };
   try {
     body = await req.json();
   } catch {
@@ -154,7 +170,7 @@ export async function POST(req: Request) {
           payout_number: payoutNumber,
           payout_bank: payoutBank,
           ...(depositsInCedis(user.country_code)
-            ? { payoutGhs: usdToGhs(amount), fxRate: ghsPerUsd() }
+            ? { payoutGhs: ghsNotice(user.country_code, user.currency, amount, body.displayAmount).amount, fxRate: ghsPerUsd() }
             : {}),
         },
       });
@@ -166,7 +182,7 @@ export async function POST(req: Request) {
       }
 
       if (exempt) {
-        const notice = toDisplayAmount(user.country_code, user.currency, amount);
+        const notice = ghsNotice(user.country_code, user.currency, amount, body.displayAmount);
         await sendSms(user.phone, withdrawalRequestedSms(notice.amount, notice.currency)).catch(() => {});
       }
 
@@ -221,7 +237,7 @@ export async function POST(req: Request) {
       payout_number: payoutNumber,
       payout_bank: payoutBank,
       ...(depositsInCedis(user.country_code)
-        ? { payoutGhs: usdToGhs(amount), fxRate: ghsPerUsd() }
+        ? { payoutGhs: ghsNotice(user.country_code, user.currency, amount, body.displayAmount).amount, fxRate: ghsPerUsd() }
         : {}),
     },
   });
@@ -236,7 +252,7 @@ export async function POST(req: Request) {
   }
 
   if (exempt) {
-    const notice = toDisplayAmount(user.country_code, user.currency, amount);
+    const notice = ghsNotice(user.country_code, user.currency, amount, body.displayAmount);
     await sendSms(user.phone, withdrawalRequestedSms(notice.amount, notice.currency)).catch(() => {});
   }
 

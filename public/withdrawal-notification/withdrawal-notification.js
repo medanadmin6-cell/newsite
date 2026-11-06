@@ -22,15 +22,22 @@
 
   function formatMoney(value, currency) {
     const amount = requireMoney(value, 'Money value');
+    const code = String(currency || 'USD').toUpperCase();
+    const digits = amount.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    if (code === 'GHS') return 'GH₵' + digits;
+    if (code === 'USD') return '$' + digits;
     try {
       return new Intl.NumberFormat(undefined, {
         style: 'currency',
-        currency: currency,
+        currency: code,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       }).format(amount);
     } catch (error) {
-      return currency + ' ' + amount.toFixed(2);
+      return code + ' ' + digits;
     }
   }
 

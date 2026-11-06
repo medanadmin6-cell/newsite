@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { matchClock, scoreFromTimeline } from "./clock";
 import { fetchResults, attachCorners, type MatchResult } from "./results";
+import { fetchEspnResults, isEspnId } from "./espn";
 import { judge, CORNER_MARKETS } from "./judge";
 import { roundMoney, stakeToWallet } from "./fx";
 
@@ -264,7 +265,21 @@ async function resolveResults(matchIds: string[]): Promise<Resolved> {
   }
 
   const fetchable = upstreamIds.filter((id) => !blocked.has(id));
-  const upstream = await fetchResults(fetchable);
+  const apiIds = fetchable.filter((id) => !isEspnId(id));
+  const espnIds = fetchable.filter((id) => isEspnId(id));
+  const upstream = await fetchResults(apiIds);
+  const espn = await fetchEspnResults(espnIds);
+  for (const [id, score] of espn) {
+    upstream.set(id, {
+      home: score.home,
+      away: score.away,
+      htHome: null,
+      htAway: null,
+      cornersHome: null,
+      cornersAway: null,
+      finished: true,
+    });
+  }
 
   for (const id of fetchable) {
     const feed = upstream.get(id);
