@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatMoney } from "@/lib/countries";
+import { dollarsAsCedis } from "@/lib/fx";
 
 /** Shared pieces for the operator console: fetching, tables, badges, money. */
 
@@ -163,10 +165,8 @@ export function Button({
 }
 
 export function money(amount: number | string, currency: string): string {
-  return `${currency} ${Number(amount).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  const shown = dollarsAsCedis(currency, Number(amount));
+  return formatMoney(shown.amount, shown.currency);
 }
 
 export function CurrencyTotals({ totals }: { totals: Record<string, number> }) {

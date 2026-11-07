@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney, localSignificant } from "@/lib/countries";
-import { depositsInCedis, ghsToUsd, highDepositTarget, MIN_WALLET_DEPOSIT, usdToGhs } from "@/lib/fx";
+import { depositsInCedis, ghsToUsd, highDepositTarget, MIN_WALLET_DEPOSIT, toDisplayAmount, usdToGhs } from "@/lib/fx";
 
 /**
  * The deposit screen.
@@ -43,14 +43,16 @@ export default function DepositPage() {
   const country = getCountry(player?.country_code);
   const cedis = depositsInCedis(player?.country_code);
   const walletCurrency = cedis ? "USD" : (player?.currency ?? "USD");
+  const typedCurrency = cedis ? "GHS" : walletCurrency;
   const phone = phoneEdit ?? player?.phone ?? "";
   const chosenNetwork = network ?? country.networks[0];
   const whatsapp = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
 
   const value = Number(amount);
-  const firstDeposit = cedis ? MIN_WALLET_DEPOSIT : country.minFirstDeposit;
-  const min = cedis ? MIN_WALLET_DEPOSIT : country.minDeposit;
-  const max = cedis ? ghsToUsd(country.maxDeposit) : country.maxDeposit;
+  const walletValue = cedis ? ghsToUsd(value) : value;
+  const firstDeposit = cedis ? usdToGhs(MIN_WALLET_DEPOSIT) : country.minFirstDeposit;
+  const min = cedis ? usdToGhs(MIN_WALLET_DEPOSIT) : country.minDeposit;
+  const max = country.maxDeposit;
 
   useEffect(() => {
     if (hydrated && !player) router.replace("/login");
@@ -88,7 +90,7 @@ export default function DepositPage() {
       const res = await fetch("/api/deposits/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: player.id, amount: value, phone, network: chosenNetwork }),
+        body: JSON.stringify({ userId: player.id, amount: walletValue, phone, network: chosenNetwork }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -166,7 +168,11 @@ export default function DepositPage() {
           ) : null}
           {typeof done.balance === "number" && (
             <p className="text-[15px] font-bold">
-              New balance {formatMoney(done.balance, walletCurrency)}
+              New balance{" "}
+              {formatMoney(
+                toDisplayAmount(player.country_code, player.currency, done.balance).amount,
+                toDisplayAmount(player.country_code, player.currency, done.balance).currency,
+              )}
             </p>
           )}
           <div className="text-left">
@@ -256,25 +262,28 @@ export default function DepositPage() {
 
             <p className="flex items-center justify-end gap-1 px-4 py-3 text-[13px] text-[var(--text-muted)]">
               <MapPin size={13} strokeWidth={2} />
-              Balance ({walletCurrency}) {Number(player.balance).toFixed(2)}
+              Balance{" "}
+              {formatMoney(
+                toDisplayAmount(player.country_code, player.currency, Number(player.balance)).amount,
+                toDisplayAmount(player.country_code, player.currency, Number(player.balance)).currency,
+              )}
             </p>
 
             <BonusBar
               deposited={deposited}
-              adding={Number.isFinite(value) && value > 0 ? value : 0}
+              adding={Number.isFinite(walletValue) && walletValue > 0 ? walletValue : 0}
               target={highDepositTarget(player.country_code, walletCurrency)}
             />
 
             <AmountField
-              currency={walletCurrency}
+              currency={typedCurrency}
               value={amount}
               onChange={setAmount}
               hint={`min. ${min.toFixed(2)}`}
             />
             {cedis && value > 0 && (
               <p className="px-4 pt-2 text-[12px] text-[var(--text-muted)]">
-                Mobile money charges {formatMoney(usdToGhs(value), "GHS")}. Your account receives{" "}
-                {formatMoney(value, "USD")}.
+                Mobile money charges {formatMoney(value, "GHS")}.
               </p>
             )}
 
@@ -297,12 +306,12 @@ export default function DepositPage() {
         <div className="space-y-2 px-4 pt-3">
           {tooSmall && (
             <p className="text-[12px] text-[var(--lose)]">
-              The minimum deposit is {formatMoney(min, walletCurrency)}.
+              The minimum deposit is {formatMoney(min, typedCurrency)}.
             </p>
           )}
           {tooBig && (
             <p className="text-[12px] text-[var(--lose)]">
-              The most you can send in one transaction is {formatMoney(max, walletCurrency)}.
+              The most you can send in one transaction is {formatMoney(max, typedCurrency)}.
             </p>
           )}
           {status && (
@@ -319,17 +328,17 @@ export default function DepositPage() {
         <ol className="mt-6 space-y-2 px-4 text-[13px] leading-relaxed text-[var(--text-muted)]">
           <li>
             1. The maximum amount per transaction is{" "}
-            <strong className="text-[var(--accent)]">{formatMoney(max, walletCurrency)}</strong>. To
+            <strong className="text-[var(--accent)]">{formatMoney(max, typedCurrency)}</strong>. To
             deposit more than that, make multiple payments.
           </li>
           <li>
             2. The minimum you can deposit is{" "}
-            <strong className="text-[var(--accent)]">{formatMoney(min, walletCurrency)}</strong>
+            <strong className="text-[var(--accent)]">{formatMoney(min, typedCurrency)}</strong>
             {firstDeposit > min && (
               <>
                 , and your first deposit must be at least{" "}
                 <strong className="text-[var(--accent)]">
-                  {formatMoney(firstDeposit, walletCurrency)}
+                  {formatMoney(firstDeposit, typedCurrency)}
                 </strong>
               </>
             )}

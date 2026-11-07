@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAdminData, adminAction, Panel, Table, Badge, Button, money } from "@/components/admin/ui";
+import { dollarsAsCedis, ghsToUsd } from "@/lib/fx";
 import { useDialog, validators } from "@/components/admin/Dialog";
 
 interface Player {
@@ -41,6 +42,7 @@ export default function PlayersPage() {
   };
 
   const credit = async (player: Player) => {
+    const shown = dollarsAsCedis(player.currency, 0);
     const values = await ask({
       title: `Adjust ${player.name}'s wallet`,
       description:
@@ -49,7 +51,7 @@ export default function PlayersPage() {
       fields: [
         {
           name: "amount",
-          label: `Amount (${player.currency})`,
+          label: `Amount (${shown.currency})`,
           placeholder: "50",
           hint: "Negative to debit.",
           validate: validators.money,
@@ -58,7 +60,9 @@ export default function PlayersPage() {
       confirmLabel: "Adjust",
     });
     if (!values) return;
-    await act(player.id, "credit", Number(values.amount));
+    const typed = Number(values.amount);
+    const walletAmount = shown.currency === "GHS" ? ghsToUsd(typed) : typed;
+    await act(player.id, "credit", walletAmount);
   };
 
   return (

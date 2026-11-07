@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAdminData, adminAction, Panel, Table, Badge, Button, money } from "@/components/admin/ui";
+import { dollarsAsCedis } from "@/lib/fx";
 
 interface Partner {
   id: string;
@@ -26,7 +27,7 @@ export default function SubAdminsPage() {
   const act = async (id: string, action: string, currency?: string) => {
     const res = await adminAction("/api/admin/sub-admins", "PATCH", { id, action, currency });
     if (res.ok && action === "settle") {
-      setNote(`Settled ${currency} ${Number(res.data?.settled ?? 0).toFixed(2)}.`);
+      setNote(`Settled ${money(Number(res.data?.settled ?? 0), currency ?? "USD")}.`);
     } else {
       setNote(res.ok ? "Done." : (res.error ?? "Failed"));
     }
@@ -99,7 +100,7 @@ export default function SubAdminsPage() {
                       .filter(([, amount]) => amount > 0)
                       .map(([currency]) => (
                         <Button key={currency} onClick={() => act(p.id, "settle", currency)}>
-                          Settle {currency}
+                          Settle {dollarsAsCedis(currency, 0).currency}
                         </Button>
                       ))}
                     {!p.approved && <Badge tone="muted">Earning nothing</Badge>}

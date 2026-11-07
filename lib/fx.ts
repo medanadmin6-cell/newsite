@@ -33,6 +33,14 @@ export function usdToGhs(usd: number, rate = ghsPerUsd()): number {
   return roundMoney(usd * rate);
 }
 
+/** The admin and the sub-admin read a stored dollar figure in cedis. Other currencies stay as they are. */
+export function dollarsAsCedis(currency: string, amount: number): { currency: string; amount: number } {
+  if (String(currency || "USD").toUpperCase() === "USD") {
+    return { currency: "GHS", amount: usdToGhs(amount) };
+  }
+  return { currency: String(currency).toUpperCase(), amount };
+}
+
 /** Ghana mobile money is collected in cedis. The wallet itself is stored in dollars. */
 export function depositsInCedis(countryCode: string | null | undefined): boolean {
   return String(countryCode ?? "").toUpperCase() === "GH";

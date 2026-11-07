@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { WalletPanel } from "@/components/partner/WalletPanel";
 import { CustomMatches } from "@/components/partner/CustomMatches";
+import { formatMoney } from "@/lib/countries";
+import { dollarsAsCedis } from "@/lib/fx";
 
 interface Partner {
   id: string;
@@ -345,9 +347,7 @@ function PartnerDashboard({ data, onReload }: { data: Dashboard; onReload: () =>
                   <p className="text-[13px] font-semibold">{p.name}</p>
                   <p className="text-[11px] text-[var(--text-faint)]">{p.phone}</p>
                 </div>
-                <p className="text-[13px] font-bold">
-                  {p.currency} {Number(p.total_deposited).toFixed(2)}
-                </p>
+                <p className="text-[13px] font-bold">{cediMoney(p.currency, p.total_deposited)}</p>
               </li>
             ))}
           </ul>
@@ -366,14 +366,14 @@ function PartnerDashboard({ data, onReload }: { data: Dashboard; onReload: () =>
               <li key={c.id} className="flex items-center justify-between px-4 py-2.5">
                 <div>
                   <p className="text-[12px]">
-                    Deposit {c.currency} {Number(c.deposit_amount).toFixed(2)}
+                    Deposit {cediMoney(c.currency, c.deposit_amount)}
                   </p>
                   <p className="text-[11px] text-[var(--text-faint)]">
                     {new Date(c.created_at).toLocaleString()} · {(Number(c.rate) * 100).toFixed(0)}%
                   </p>
                 </div>
                 <p className="text-[13px] font-bold text-[var(--accent)]">
-                  +{c.currency} {Number(c.amount).toFixed(2)}
+                  +{cediMoney(c.currency, c.amount)}
                 </p>
               </li>
             ))}
@@ -423,15 +423,18 @@ function Card({
   );
 }
 
+function cediMoney(currency: string, amount: number) {
+  const shown = dollarsAsCedis(currency, Number(amount));
+  return formatMoney(shown.amount, shown.currency);
+}
+
 function Money({ totals }: { totals: Record<string, number> }) {
   const entries = Object.entries(totals ?? {}).filter(([, v]) => v);
   if (!entries.length) return <span className="text-[var(--text-faint)]">—</span>;
   return (
     <>
       {entries.map(([currency, amount]) => (
-        <p key={currency}>
-          {currency} {Number(amount).toFixed(2)}
-        </p>
+        <p key={currency}>{cediMoney(currency, amount)}</p>
       ))}
     </>
   );

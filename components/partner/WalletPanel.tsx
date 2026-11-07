@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Wallet, ArrowRight, Banknote } from "lucide-react";
 import { useSession } from "@/lib/store";
 import { allCountries, DEFAULT_COUNTRY, getCountry, formatMoney } from "@/lib/countries";
+import { ghsToUsd, toDisplayAmount, usdToGhs } from "@/lib/fx";
 /**
  * The partner's own betting account.
  *
@@ -50,6 +51,10 @@ export function WalletPanel({
   const [note, setNote] = useState<string | null>(null);
 
   const country = getCountry(wallet?.country_code ?? countryCode);
+  const shown = wallet
+    ? toDisplayAmount(wallet.country_code, wallet.currency, Number(wallet.balance))
+    : { currency: country.currency, amount: 0 };
+  const cedis = shown.currency === "GHS" && String(wallet?.currency ?? "").toUpperCase() === "USD";
 
   const open = async () => {
     setBusy(true);
@@ -84,14 +89,15 @@ export function WalletPanel({
       const res = await fetch("/api/partner/credit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Number(amount) }),
+        body: JSON.stringify({ amount: cedis ? ghsToUsd(Number(amount)) : Number(amount) }),
       });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Could not credit the wallet");
         return;
       }
-      setNote(`Credited. New balance ${formatMoney(json.balance, country.currency)}.`);
+      const next = toDisplayAmount(wallet?.country_code, wallet?.currency, Number(json.balance));
+      setNote(`Credited. New balance ${formatMoney(next.amount, next.currency)}.`);
       setAmount("");
       onChanged();
     } catch {
@@ -191,7 +197,7 @@ export function WalletPanel({
           <div>
             <p className="text-[11px] uppercase tracking-wide text-[var(--text-faint)]">Wallet balance</p>
             <p className="text-[26px] font-black leading-none text-[var(--accent)]">
-              {formatMoney(Number(wallet.balance), wallet.currency)}
+              {formatMoney(shown.amount, shown.currency)}
             </p>
             <p className="mt-1 text-[11px] text-[var(--text-faint)]">
               {wallet.phone} · {country.name}
@@ -225,7 +231,7 @@ export function WalletPanel({
               min={1}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Amount in ${wallet.currency}`}
+              placeholder={`Amount in ${shown.currency}`}
               className="w-40 rounded bg-[var(--surface-2)] px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
             <button
@@ -244,8 +250,9 @@ export function WalletPanel({
             />
           </div>
           <p className="text-[11px] text-[var(--text-faint)]">
-            {formatMoney(creditedToday, wallet.currency)} of {formatMoney(dailyLimit, wallet.currency)}{" "}
-            used today · {formatMoney(remaining, wallet.currency)} left. Every credit is recorded on the
+            {formatMoney(cedis ? usdToGhs(creditedToday) : creditedToday, shown.currency)} of{" "}
+            {formatMoney(cedis ? usdToGhs(dailyLimit) : dailyLimit, shown.currency)} used today ·{" "}
+            {formatMoney(cedis ? usdToGhs(remaining) : remaining, shown.currency)} left. Every credit is recorded on the
             operator&apos;s ledger.
           </p>
 
