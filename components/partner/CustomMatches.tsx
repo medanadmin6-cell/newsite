@@ -29,7 +29,7 @@ interface CustomMatch {
 const BLANK = {
   home_team: "",
   away_team: "",
-  league: "Betvanta Special",
+  league: "",
   kickoff: "",
   odds_home: "2.00",
   odds_draw: "3.20",
@@ -130,6 +130,25 @@ export function CustomMatches({ approved }: { approved: boolean }) {
     await patch(m.id, { final_home: h, final_away: a });
   };
 
+  const rename = async (m: CustomMatch) => {
+    const values = await ask({
+      title: "League name",
+      description: `${m.home_team} v ${m.away_team}. This is the name players see. The site name is not added.`,
+      fields: [
+        {
+          name: "league",
+          label: "League",
+          defaultValue: m.league,
+          placeholder: "League name",
+          validate: (value) => (value.trim() ? null : "Type a league name"),
+        },
+      ],
+      confirmLabel: "Save",
+    });
+    if (!values) return;
+    await patch(m.id, { league: values.league.trim() });
+  };
+
   const remove = async (m: CustomMatch) => {
     const ok = await confirm({
       title: "Delete this match?",
@@ -169,7 +188,8 @@ export function CustomMatches({ approved }: { approved: boolean }) {
               className={field}
             />
             <input
-              placeholder="League"
+              required
+              placeholder="League name"
               value={form.league}
               onChange={(e) => setForm({ ...form, league: e.target.value })}
               className={field}
@@ -267,6 +287,7 @@ export function CustomMatches({ approved }: { approved: boolean }) {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
+                    <Small onClick={() => rename(m)}>League</Small>
                     <Small onClick={() => setScripting(m)}>Goals ({(m.goal_timeline ?? []).length})</Small>
                     <Small onClick={() => patch(m.id, { is_live: !m.is_live })}>
                       {m.is_live ? "End live" : "Go live"}

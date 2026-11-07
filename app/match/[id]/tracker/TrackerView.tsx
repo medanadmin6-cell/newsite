@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import type { FeedMatch } from "@/lib/fixtures";
+import { competitionLabel } from "@/lib/competition";
 import type { TrackerEvent, TrackerStat } from "@/lib/tracker";
 import { PitchTracker } from "@/components/PitchTracker";
 
@@ -119,7 +120,7 @@ export function TrackerView({ id }: { id: string }) {
                 <Side name={match.homeTeam} crest={match.homeCrest} />
                 <div className="shrink-0 text-center">
                   <p className="text-[12px] text-[var(--text-muted)]">
-                    {match.country} - {match.league}
+                    {competitionLabel(match.country, match.league)}
                   </p>
                   <p
                     className="mt-0.5 text-[13px] font-bold"

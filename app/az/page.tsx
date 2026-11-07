@@ -23,9 +23,10 @@ export default function AzMenuPage() {
   const byCountry = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
     for (const m of feed ?? []) {
-      const leagues = map.get(m.country) ?? new Map<string, number>();
+      const place = m.country.trim() || "Other";
+      const leagues = map.get(place) ?? new Map<string, number>();
       leagues.set(m.league, (leagues.get(m.league) ?? 0) + 1);
-      map.set(m.country, leagues);
+      map.set(place, leagues);
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [feed]);

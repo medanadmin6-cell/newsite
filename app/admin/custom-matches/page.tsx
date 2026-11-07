@@ -30,7 +30,7 @@ interface CustomMatch {
 const BLANK = {
   home_team: "",
   away_team: "",
-  league: "Betvanta Special",
+  league: "",
   kickoff: "",
   odds_home: 2.0,
   odds_draw: 3.2,
@@ -96,6 +96,25 @@ export default function CustomMatchesPage() {
     await patch(m.id, { final_home: h, final_away: a });
   };
 
+  const rename = async (m: CustomMatch) => {
+    const values = await ask({
+      title: "League name",
+      description: `${m.home_team} v ${m.away_team}. This is the name players see. The site name is not added.`,
+      fields: [
+        {
+          name: "league",
+          label: "League",
+          defaultValue: m.league,
+          placeholder: "League name",
+          validate: (value) => (value.trim() ? null : "Type a league name"),
+        },
+      ],
+      confirmLabel: "Save",
+    });
+    if (!values) return;
+    await patch(m.id, { league: values.league.trim() });
+  };
+
   const remove = async (m: CustomMatch) => {
     const ok = await confirm({
       title: "Delete this match?",
@@ -118,7 +137,7 @@ export default function CustomMatchesPage() {
         <form onSubmit={create} className="grid gap-2 p-3 sm:grid-cols-4">
           <Input placeholder="Home team" value={form.home_team} onChange={(v) => setForm({ ...form, home_team: v })} required />
           <Input placeholder="Away team" value={form.away_team} onChange={(v) => setForm({ ...form, away_team: v })} required />
-          <Input placeholder="League" value={form.league} onChange={(v) => setForm({ ...form, league: v })} />
+          <Input placeholder="League name" value={form.league} onChange={(v) => setForm({ ...form, league: v })} required />
           <input
             type="datetime-local"
             value={form.kickoff}
@@ -211,6 +230,7 @@ export default function CustomMatchesPage() {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-1">
+                    <Button onClick={() => rename(m)}>League</Button>
                     <Button onClick={() => setScripting(m)}>
                       Goals ({(m.goal_timeline ?? []).length})
                     </Button>

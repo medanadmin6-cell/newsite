@@ -7,6 +7,7 @@ import { Lock, ChevronRight, Flame } from "lucide-react";
 import { useSlip, usePopularity, type SlipLeg } from "@/lib/store";
 import { useNow } from "@/lib/now";
 import { matchClock } from "@/lib/clock";
+import { competitionLabel } from "@/lib/competition";
 import type { FeedMatch } from "@/lib/fixtures";
 
 /**
@@ -109,22 +110,26 @@ export function MatchList({
   const grouped = useMemo(() => {
     if (!filtered) return [];
 
-    // The house's own matches come first, then whatever the feed brought, and
-    // only then is the list cut to size — so a limit never costs a custom game
-    // its place.
-    const ordered = [
-      ...filtered.filter((m) => m.source === "custom"),
-      ...filtered.filter((m) => m.source !== "custom"),
-    ];
-    const shown = limit ? ordered.slice(0, limit) : ordered;
+    // Custom matches sit at the top and again at the bottom, so they stay
+    // easy to find however far the board is scrolled. A limit never drops them.
+    const custom = filtered.filter((m) => m.source === "custom");
+    const rest = filtered.filter((m) => m.source !== "custom");
+    const shownRest = limit ? rest.slice(0, limit) : rest;
 
-    const map = new Map<string, FeedMatch[]>();
-    for (const m of shown) {
-      const list = map.get(m.league) ?? [];
-      list.push(m);
-      map.set(m.league, list);
-    }
-    return [...map.entries()];
+    const group = (rows: FeedMatch[], place: string) => {
+      const map = new Map<string, FeedMatch[]>();
+      for (const m of rows) {
+        const list = map.get(m.league) ?? [];
+        list.push(m);
+        map.set(m.league, list);
+      }
+      return [...map.entries()].map(([league, list]) => ({ key: `${place}-${league}`, league, list }));
+    };
+
+    const top = group(custom, "top");
+    const middle = group(shownRest, "feed");
+    if (!custom.length || !shownRest.length) return [...top, ...middle];
+    return [...top, ...middle, ...group(custom, "bottom")];
   }, [filtered, limit]);
 
   const activeTab = MARKET_TABS.find((t) => t.key === market) ?? MARKET_TABS[0];
@@ -162,11 +167,11 @@ export function MatchList({
         ))}
       </div>
 
-      {grouped.map(([league, list]) => (
-        <section key={league} className="overflow-hidden rounded-2xl bg-[var(--bg-elevated)] shadow-sm">
+      {grouped.map(({ key, league, list }) => (
+        <section key={key} className="overflow-hidden rounded-2xl bg-[var(--bg-elevated)] shadow-sm">
           <header className="flex items-center justify-between bg-[var(--surface)] px-3 py-2 md:px-4">
             <h2 className="truncate text-[12px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-              {league}
+              {competitionLabel(list[0]?.country ?? "", league)}
             </h2>
             <div className="flex shrink-0 gap-1 md:gap-1.5">
               {activeTab.cols.map((c) => (
@@ -182,7 +187,7 @@ export function MatchList({
 
           <div className="divide-y divide-[var(--line)]">
             {list.map((m) => (
-              <MatchRow key={m.id} match={m} marketKey={activeTab.key} cols={activeTab.cols} />
+              <MatchRow key={`${key}-${m.id}`} match={m} marketKey={activeTab.key} cols={activeTab.cols} />
             ))}
           </div>
         </section>
@@ -244,7 +249,7 @@ function MatchRow({
             href={`/search?q=${encodeURIComponent(match.league)}`}
             className="truncate text-[11px] text-[var(--text-muted)] underline decoration-[var(--text-faint)]"
           >
-            {match.country} - {match.league}
+            {competitionLabel(match.country, match.league)}
           </Link>
         </div>
       )}

@@ -75,16 +75,16 @@ export async function listCustomMatches(ownerId: string | null) {
   return { ok: true as const, matches: data ?? [] };
 }
 
-export async function createCustomMatch(
-  body: MatchBody | null,
-  ownerId: string | null,
-  defaultLeague: string,
-) {
+export async function createCustomMatch(body: MatchBody | null, ownerId: string | null) {
   const supabase = db();
   if (!supabase) return { ok: false as const, status: 503, error: "Service unavailable" };
 
   if (!body?.home_team?.trim() || !body?.away_team?.trim() || !body?.kickoff) {
     return { ok: false as const, status: 400, error: "Teams and kickoff are required" };
+  }
+  const league = body.league?.trim() ?? "";
+  if (!league) {
+    return { ok: false as const, status: 400, error: "A league name is required" };
   }
 
   const kickoff = new Date(body.kickoff);
@@ -97,7 +97,7 @@ export async function createCustomMatch(
     away_team: body.away_team.trim(),
     home_crest: body.home_crest || null,
     away_crest: body.away_crest || null,
-    league: body.league?.trim() || defaultLeague,
+    league,
     sport: body.sport || "football",
     kickoff: kickoff.toISOString(),
     odds_home: price(body.odds_home, 2),
@@ -160,7 +160,9 @@ export async function updateCustomMatch(body: MatchBody | null, ownerId: string 
       }
       patch.kickoff = kickoff.toISOString();
     } else if (field === "home_team" || field === "away_team" || field === "league") {
-      patch[field] = String(body[field] ?? "").trim();
+      const text = String(body[field] ?? "").trim();
+      if (!text) return { ok: false as const, status: 400, error: "That name cannot be empty" };
+      patch[field] = text;
     } else {
       patch[field] = body[field];
     }

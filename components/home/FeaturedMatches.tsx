@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Lock } from "lucide-react";
 import { useSlip, type SlipLeg } from "@/lib/store";
 import type { FeedMatch } from "@/lib/fixtures";
+import { competitionLabel } from "@/lib/competition";
 
 /**
  * The featured match carousel.
@@ -56,7 +57,7 @@ function FeaturedCard({ match }: { match: FeedMatch }) {
     >
       <Link href={`/match/${match.id}`} className="block">
         <p className="truncate text-[11px] text-[var(--text-muted)]">
-          {match.country} - {match.league}
+          {competitionLabel(match.country, match.league)}
         </p>
       </Link>
 

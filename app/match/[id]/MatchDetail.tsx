@@ -12,6 +12,7 @@ import { BetSlip } from "@/components/BetSlip";
 import { SlipButton } from "@/components/Shell";
 import { useSlip, useSession, type SlipLeg } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
+import { competitionLabel } from "@/lib/competition";
 import { toDisplayAmount } from "@/lib/fx";
 import type { FeedMatch } from "@/lib/fixtures";
 import type { Market, MarketGroup } from "@/lib/odds";
@@ -102,7 +103,7 @@ export function MatchDetail({ id }: { id: string }) {
               </Link>
               {" / "}
               <Link href={`/search?q=${encodeURIComponent(match.league)}`} className="underline">
-                {match.country} - {match.league}
+                {competitionLabel(match.country, match.league)}
               </Link>
             </nav>
 
@@ -126,7 +127,6 @@ export function MatchDetail({ id }: { id: string }) {
               </Link>
             </div>
 
-            <Watermark />
 
             <div className="scroll-x flex items-center gap-2 px-2.5 pb-3 md:px-5">
               <button
@@ -270,16 +270,6 @@ function TeamSide({ name, crest }: { name: string; crest: string | null }) {
       <span className="text-center text-[13px] leading-tight text-[var(--text)] underline decoration-[var(--text-faint)] underline-offset-2">
         {name}
       </span>
-    </div>
-  );
-}
-
-function Watermark() {
-  return (
-    <div className="flex items-center gap-3 px-6 py-4 md:px-5">
-      <span className="h-px flex-1 bg-[var(--line)]" />
-      <span className="text-[10px] font-bold tracking-[0.3em] text-[var(--text-faint)]">STAKEZA</span>
-      <span className="h-px flex-1 bg-[var(--line)]" />
     </div>
   );
 }

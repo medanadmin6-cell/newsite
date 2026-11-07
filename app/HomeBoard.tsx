@@ -97,7 +97,11 @@ export function HomeBoard() {
     return [...pool.filter((match) => match.bestOdds), ...pool.filter((match) => !match.bestOdds)].slice(0, 8);
   }, [feed, league]);
 
-  const live = useMemo(() => (feed ?? []).filter((match) => match.isLive && isSoccer(match)), [feed]);
+  const custom = useMemo(() => (feed ?? []).filter((match) => match.source === "custom"), [feed]);
+  const live = useMemo(
+    () => (feed ?? []).filter((match) => match.isLive && isSoccer(match) && match.source !== "custom"),
+    [feed],
+  );
 
   if (tab) {
     return (
@@ -114,6 +118,7 @@ export function HomeBoard() {
   return (
     <Page>
       <div className="space-y-3 px-3 pt-3">
+        {custom.length > 0 && <MatchList matches={custom} />}
         <Link
           href="/games"
           className="relative block h-[168px] overflow-hidden rounded-2xl bg-[#14061f] text-white"
@@ -265,6 +270,8 @@ export function HomeBoard() {
             )}
           </div>
         </section>
+
+        {custom.length > 0 && <MatchList matches={custom} />}
       </div>
       <BetSlip />
       <SupportChat />
