@@ -223,13 +223,18 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: "blu
   );
 }
 
-function liveLeg(ticket: Ticket): { label: string } | null {
+function liveLeg(ticket: Ticket): { label: string; done: boolean } | null {
   if (ticket.status !== "pending") return null;
+  let done = true;
+  let saw = false;
   for (const leg of ticket.selections) {
     if (!leg.kickoff || leg.result === "won" || leg.result === "lost") continue;
+    saw = true;
     const clock = matchClock(leg.kickoff);
-    if (clock.isLive) return { label: clock.label };
+    if (clock.isLive) return { label: clock.label, done: false };
+    if (!clock.isOver) done = false;
   }
+  if (saw && done) return { label: "FT", done: true };
   return null;
 }
 
@@ -267,10 +272,13 @@ function TicketCard({
             </p>
             {live && (
               <p className="mt-1 flex items-center gap-1.5">
-                <span className="rounded-sm bg-[var(--live)] px-1.5 py-px text-[9px] font-black text-white">
-                  LIVE
+                <span
+                  className="rounded-sm px-1.5 py-px text-[9px] font-black text-white"
+                  style={{ background: live.done ? "var(--text-muted)" : "var(--live)" }}
+                >
+                  {live.done ? "FT" : "LIVE"}
                 </span>
-                <span className="text-[11px] font-bold text-[var(--live)]">{live.label}</span>
+                {!live.done && <span className="text-[11px] font-bold text-[var(--live)]">{live.label}</span>}
               </p>
             )}
           </div>
@@ -278,7 +286,7 @@ function TicketCard({
             className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase"
             style={{ background: style.bg, color: style.fg }}
           >
-            {style.label}
+            {live?.done ? "Full time" : style.label}
           </span>
         </div>
 

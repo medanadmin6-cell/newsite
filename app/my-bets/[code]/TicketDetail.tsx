@@ -277,11 +277,14 @@ export function TicketDetail({ code }: { code: string }) {
 
   const { bet, selections, cashout: offer } = data;
   const running = selections.some((leg) => legIsLive(leg, nowMs));
+  const waiting = selections.filter((leg) => leg.result !== "won" && leg.result !== "lost");
+  const finished = !running && waiting.length > 0 && waiting.every((leg) => legIsOver(leg, nowMs));
   const status = STATUS[bet.status] ?? STATUS.pending;
   const settled = bet.status !== "pending";
   const won = bet.status === "won" || bet.status === "cashed_out";
-  const statusLabel = !settled && running ? "LIVE" : status.label;
+  const statusLabel = !settled && running ? "LIVE" : !settled && finished ? "FULL TIME" : status.label;
   const statusColour = !settled && running ? "var(--live)" : status.colour;
+  const canCashOut = offer.available && !finished;
 
   return (
     <div className="min-h-screen bg-[var(--bg)] pb-24">
@@ -438,11 +441,11 @@ export function TicketDetail({ code }: { code: string }) {
           </button>
           <button
             onClick={cashout}
-            disabled={busy || !offer.available}
+            disabled={busy || !canCashOut}
             className="flex-1 rounded-full py-2.5 text-[13px] font-black text-[var(--accent-ink)] disabled:opacity-30"
             style={{ background: "var(--accent)" }}
           >
-            {offer.available
+            {canCashOut
               ? `Cash Out ${shownMoney(player.country_code, bet.currency, offer.amount)}`
               : "Cash Out"}
           </button>
@@ -530,11 +533,20 @@ function Line({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
+function legClock(leg: Leg, nowMs: number) {
+  if (!leg.kickoff || nowMs <= 0) return null;
+  return matchClock(leg.kickoff, leg.sport || "football", new Date(nowMs));
+}
+
 function legIsLive(leg: Leg, nowMs: number): boolean {
   if (leg.result === "won" || leg.result === "lost") return false;
   if (leg.isLive) return true;
-  if (!leg.kickoff || nowMs <= 0) return false;
-  return matchClock(leg.kickoff, leg.sport || "football", new Date(nowMs)).isLive;
+  return Boolean(legClock(leg, nowMs)?.isLive);
+}
+
+function legIsOver(leg: Leg, nowMs: number): boolean {
+  if (leg.result === "won" || leg.result === "lost") return false;
+  return Boolean(legClock(leg, nowMs)?.isOver);
 }
 
 function LegCard({ leg }: { leg: Leg }) {

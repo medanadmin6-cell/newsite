@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { getMatchDetail } from "@/lib/fixtures";
+import { matchClock } from "@/lib/clock";
 import { resolveSelection } from "@/lib/resolve";
 import { cashoutOffer, refusalMessage, type CashoutLeg } from "@/lib/cashout";
 import { cashoutEnabled } from "@/lib/schema";
@@ -53,7 +54,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ code: string }
 
   const { data: legs } = await supabase
     .from("bet_selections")
-    .select("match_id, market, outcome, odds, result")
+    .select("match_id, market, outcome, odds, result, kickoff, sport")
     .eq("bet_id", bet.id);
 
   if (!legs?.length) return NextResponse.json({ error: "This ticket has no legs" }, { status: 409 });
@@ -67,11 +68,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ code: string }
   const cashLegs: CashoutLeg[] = legs.map((leg) => {
     const match = byId.get(leg.match_id);
     const resolved = match ? resolveSelection(match.markets, leg.market, leg.outcome) : null;
+    const clock = leg.kickoff ? matchClock(leg.kickoff, leg.sport || "football") : null;
+    const running = Boolean(match?.isLive) || Boolean(clock?.isLive) || Boolean(clock?.isOver);
     return {
       state: leg.result === "won" ? "won" : leg.result === "lost" ? "lost" : "pending",
       odds: Number(leg.odds),
-      currentOdds: resolved?.price.odds ?? null,
-      live: Boolean(match?.isLive),
+      currentOdds: running ? null : (resolved?.price.odds ?? null),
+      live: running,
     };
   });
 

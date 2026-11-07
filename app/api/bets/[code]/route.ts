@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { getMatchDetail } from "@/lib/fixtures";
+import { matchClock } from "@/lib/clock";
 import { resolveSelection } from "@/lib/resolve";
 import { cashoutOffer, type CashoutLeg } from "@/lib/cashout";
 import { settleBets } from "@/lib/settle";
@@ -77,23 +78,25 @@ export async function GET(req: Request, ctx: { params: Promise<{ code: string }>
     for (const leg of selections) {
       const match = byId.get(leg.match_id);
       const resolved = match ? resolveSelection(match.markets, leg.market, leg.outcome) : null;
+      const clock = leg.kickoff ? matchClock(leg.kickoff, leg.sport || "football") : null;
+      const running = Boolean(match?.isLive) || Boolean(clock?.isLive) || Boolean(clock?.isOver);
 
       // The running score, so a ticket on an in-play match shows what is
       // happening rather than a pair of dashes. final_home is only written at
       // settlement, so it is null for the whole time a player most wants to look.
       live[leg.id] = {
-        currentOdds: resolved?.price.odds ?? null,
-        isLive: Boolean(match?.isLive),
+        currentOdds: running ? null : (resolved?.price.odds ?? null),
+        isLive: Boolean(match?.isLive) || Boolean(clock?.isLive),
         liveHome: match?.scoreHome ?? null,
         liveAway: match?.scoreAway ?? null,
-        minuteLabel: match?.isLive ? (match.minuteLabel || null) : null,
+        minuteLabel: clock?.isLive ? clock.label : match?.isLive ? (match.minuteLabel || null) : null,
       };
 
       cashLegs.push({
         state: leg.result === "won" ? "won" : leg.result === "lost" ? "lost" : "pending",
         odds: Number(leg.odds),
-        currentOdds: resolved?.price.odds ?? null,
-        live: Boolean(match?.isLive),
+        currentOdds: running ? null : (resolved?.price.odds ?? null),
+        live: running,
       });
     }
   }

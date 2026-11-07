@@ -188,13 +188,20 @@ export async function fetchEspnResults(ids: string[]): Promise<Map<string, EspnS
       const json = (await res.json()) as {
         header?: { competitions?: Competition[] };
       };
-      const comp = json.header?.competitions?.[0];
-      if (comp?.status?.type?.state !== "post") continue;
-      const home = comp.competitors?.find((c) => c.homeAway === "home");
-      const away = comp.competitors?.find((c) => c.homeAway === "away");
+      const comp = json.header?.competitions?.[0] as (Competition & { date?: string }) | undefined;
+      const state = comp?.status?.type?.state;
+      const home = comp?.competitors?.find((c) => c.homeAway === "home");
+      const away = comp?.competitors?.find((c) => c.homeAway === "away");
       const homeScore = Number(home?.score);
       const awayScore = Number(away?.score);
       if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) continue;
+      const kickoff = comp?.date;
+      const over = Boolean(kickoff) && matchClock(kickoff as string).isOver;
+      // "post" is the official finish. Once our clock is past full time, a
+      // score from a match that actually started is the result too. A match
+      // the feed still calls pre-match is left alone, so a placeholder 0-0
+      // is never paid.
+      if (state !== "post" && !(over && state !== "pre")) continue;
       out.set(full, { home: homeScore, away: awayScore });
     } catch (err) {
       console.error("[espn] result", id, err);

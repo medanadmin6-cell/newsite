@@ -97,12 +97,17 @@ export async function fetchResults(ids: string[]): Promise<Map<string, MatchResu
       const clockOver = kickoff ? matchClock(kickoff).isOver : false;
       const started = status !== "NS" && status !== "TBD" && status !== "PST";
       const blocked = status === "PST" || status === "CANC" || status === "ABD";
-      if (blocked || (!SETTLED.has(status) && !(clockOver && started))) continue;
 
       // Prefer the explicit full-time score; fall back to the goals block.
       const home = f.score?.fulltime?.home ?? f.goals?.home;
       const away = f.score?.fulltime?.away ?? f.goals?.away;
       if (home === null || away === null || home === undefined || away === undefined) continue;
+
+      // A 0-0 that the feed still calls "not started" is not a result. A real
+      // score after the kickoff clock is over is, even if the status never
+      // flipped to full time.
+      const blank = Number(home) === 0 && Number(away) === 0;
+      if (blocked || (!SETTLED.has(status) && !(clockOver && (started || !blank)))) continue;
 
       const value: MatchResult = {
         home: Number(home),
