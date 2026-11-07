@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Lock, ChevronRight, Flame } from "lucide-react";
 import { useSlip, usePopularity, type SlipLeg } from "@/lib/store";
 import { useNow } from "@/lib/now";
+import { matchClock } from "@/lib/clock";
 import type { FeedMatch } from "@/lib/fixtures";
 
 /**
@@ -14,6 +15,16 @@ import type { FeedMatch } from "@/lib/fixtures";
  */
 
 const POLL_MS = 30_000;
+
+/** Live from the kickoff on this phone, so a match flips at 14:00 even when the feed snapshot is still the pre-match one. */
+function clockOf(match: FeedMatch, now: number) {
+  if (!now || match.postponed || !match.kickoff) return null;
+  return matchClock(match.kickoff, match.sport || "football", new Date(now));
+}
+
+function isPlaying(match: FeedMatch, now: number): boolean {
+  return Boolean(match.isLive || clockOf(match, now)?.isLive);
+}
 
 const MARKET_TABS = [
   { key: "1x2", label: "1X2", cols: ["1", "X", "2"] },
@@ -79,11 +90,11 @@ export function MatchList({
 
   const filtered = useMemo(() => {
     if (!matches) return null;
-    if (tab === "live") return matches.filter((m) => m.isLive);
+    if (tab === "live") return matches.filter((m) => isPlaying(m, now));
     if (tab === "boosted") return matches.filter((m) => m.bestOdds);
     if (tab === "soon") {
       const cutoff = now + 3 * 3_600_000;
-      return matches.filter((m) => !m.isLive && new Date(m.kickoff).getTime() <= cutoff);
+      return matches.filter((m) => !isPlaying(m, now) && new Date(m.kickoff).getTime() <= cutoff);
     }
     if (tab === "today") {
       const today = new Date(now).toDateString();
@@ -91,7 +102,7 @@ export function MatchList({
     }
     // "Upcoming" means what it says: a match already in play belongs to Live,
     // and showing it in both is how a six-row section ends up all live.
-    if (tab === "upcoming") return matches.filter((m) => !m.isLive);
+    if (tab === "upcoming") return matches.filter((m) => !isPlaying(m, now));
     return matches;
   }, [matches, tab, now]);
 
@@ -192,6 +203,11 @@ function MatchRow({
   const toggle = useSlip((s) => s.toggle);
   const legs = useSlip((s) => s.legs);
   const count = usePopularity((s) => s.counts[match.id]);
+  const now = useNow();
+  const clock = clockOf(match, now);
+  const live = Boolean(match.isLive || clock?.isLive);
+  const minuteLabel = live ? (match.isLive && match.minuteLabel ? match.minuteLabel : clock?.label || "LIVE") : "";
+  const locked = match.isLocked || live || Boolean(clock?.isOver);
 
   const market = match.markets.find((m) => m.key === marketKey);
   const selected = legs.find((l) => l.matchId === match.id);
@@ -215,11 +231,11 @@ function MatchRow({
   return (
     <div className="px-3 py-2.5 md:px-4 md:py-3">
       {/* A running match leads with its clock and competition. */}
-      {match.isLive && (
+      {live && (
         <div className="mb-1.5 flex items-center gap-1.5">
           <span className="flex h-[18px] items-center gap-1 rounded-full bg-[var(--live)] px-1.5">
             <Flame size={10} strokeWidth={2.6} className="text-white" />
-            <span className="text-[10px] font-black text-white">{match.minuteLabel}</span>
+            <span className="text-[10px] font-black text-white">{minuteLabel}</span>
           </span>
           <span className="rounded-sm px-1 text-[9px] font-black text-[var(--live)] ring-1 ring-[var(--live)]">
             LIVE
@@ -234,7 +250,7 @@ function MatchRow({
       )}
 
       <div className="flex items-center gap-2 md:gap-4">
-        {!match.isLive && (
+        {!live && (
           <div className="w-12 shrink-0 text-center md:w-16">
             <KickoffTime iso={match.kickoff} />
           </div>
@@ -253,7 +269,7 @@ function MatchRow({
           {match.postponed && (
             <span className="text-[10px] font-semibold text-[var(--pending)]">Postponed</span>
           )}
-          {count != null && !match.isLive && (
+          {count != null && !live && (
             <span className="text-[10px] text-[var(--text-faint)]">{count.toLocaleString()} betting</span>
           )}
             <span className="ml-auto inline-flex items-center text-[10px] text-[var(--text-faint)]">
@@ -267,7 +283,7 @@ function MatchRow({
         {cols.map((outcome) => {
           const price = market?.prices.find((p) => p.outcome === outcome);
           const isOn = selected?.market === marketKey && selected?.outcome === outcome;
-          const disabled = match.isLocked || !price;
+          const disabled = locked || !price;
 
           return (
             <button
@@ -284,7 +300,7 @@ function MatchRow({
             >
               {disabled && !price ? (
                 "—"
-              ) : match.isLocked ? (
+              ) : locked ? (
                 <Lock size={13} strokeWidth={2} className="mx-auto" />
               ) : (
                 price!.odds.toFixed(2)

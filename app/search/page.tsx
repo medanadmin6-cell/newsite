@@ -13,12 +13,17 @@ export default function SearchPage() {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/fixtures", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { matches: [] }))
-      .then((j) => alive && setFeed(j.matches ?? []))
-      .catch(() => alive && setFeed([]));
+    const load = () => {
+      fetch("/api/fixtures", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : { matches: [] }))
+        .then((j) => alive && setFeed(j.matches ?? []))
+        .catch(() => alive && setFeed([]));
+    };
+    load();
+    const timer = setInterval(load, 30_000);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, []);
 

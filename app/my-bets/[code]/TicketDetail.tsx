@@ -19,6 +19,8 @@ import { useSlip, useSession, type SlipLeg } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
 import { toDisplayAmount } from "@/lib/fx";
 import { marketName } from "@/lib/markets";
+import { matchClock } from "@/lib/clock";
+import { useNow } from "@/lib/now";
 
 /**
  * One ticket in full.
@@ -89,6 +91,7 @@ export function TicketDetail({ code }: { code: string }) {
   const hydrated = useSession((s) => s.hydrated);
   const setBalance = useSession((s) => s.setBalance);
   const load = useSlip((s) => s.load);
+  const nowMs = useNow();
 
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -273,9 +276,12 @@ export function TicketDetail({ code }: { code: string }) {
   }
 
   const { bet, selections, cashout: offer } = data;
+  const running = selections.some((leg) => legIsLive(leg, nowMs));
   const status = STATUS[bet.status] ?? STATUS.pending;
   const settled = bet.status !== "pending";
   const won = bet.status === "won" || bet.status === "cashed_out";
+  const statusLabel = !settled && running ? "LIVE" : status.label;
+  const statusColour = !settled && running ? "var(--live)" : status.colour;
 
   return (
     <div className="min-h-screen bg-[var(--bg)] pb-24">
@@ -315,9 +321,9 @@ export function TicketDetail({ code }: { code: string }) {
           <span className="text-[17px] font-bold capitalize text-[var(--text-bright)]">
             {bet.mode}
           </span>
-          <span className="flex items-center gap-1.5" style={{ color: status.colour }}>
+          <span className="flex items-center gap-1.5" style={{ color: statusColour }}>
             {won && <Trophy size={17} strokeWidth={2} />}
-            <span className="text-[17px] font-black">{status.label}</span>
+            <span className="text-[17px] font-black">{statusLabel}</span>
           </span>
         </div>
 
@@ -524,15 +530,29 @@ function Line({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
+function legIsLive(leg: Leg, nowMs: number): boolean {
+  if (leg.result === "won" || leg.result === "lost") return false;
+  if (leg.isLive) return true;
+  if (!leg.kickoff || nowMs <= 0) return false;
+  return matchClock(leg.kickoff, leg.sport || "football", new Date(nowMs)).isLive;
+}
+
 function LegCard({ leg }: { leg: Leg }) {
+  const nowMs = useNow();
+  const clock =
+    leg.kickoff && nowMs > 0 ? matchClock(leg.kickoff, leg.sport || "football", new Date(nowMs)) : null;
+  const live = legIsLive(leg, nowMs);
+  const fullTime = Boolean(clock?.isOver) && leg.result !== "won" && leg.result !== "lost";
   const state =
     leg.result === "won"
       ? { label: "WON", colour: "var(--win)" }
       : leg.result === "lost"
         ? { label: "LOST", colour: "var(--lose)" }
-        : leg.isLive
+        : live
           ? { label: "LIVE", colour: "var(--live)" }
-          : { label: "NOT STARTED", colour: "var(--text-faint)" };
+          : fullTime
+            ? { label: "FULL TIME", colour: "var(--text-muted)" }
+            : { label: "NOT STARTED", colour: "var(--text-faint)" };
 
   // A settled leg keeps the score it was judged on; an open one shows the
   // score right now, which is the whole reason to open a ticket mid-match.
@@ -583,14 +603,14 @@ function LegCard({ leg }: { leg: Leg }) {
               : "—"}
           </span>
           <span className="capitalize underline decoration-[var(--text-faint)]">{leg.sport}</span>
-          {leg.minuteLabel && (
-            <span className="font-bold text-[var(--live)]">{leg.minuteLabel}</span>
+          {(live || fullTime) && (
+            <span className="font-bold text-[var(--live)]">{live ? leg.minuteLabel || clock?.label : "FT"}</span>
           )}
           <span
             className="ml-auto rounded px-1.5 py-0.5 text-[9px] font-black"
             style={{ color: state.colour, boxShadow: `inset 0 0 0 1px ${state.colour}` }}
           >
-            {leg.isLive ? "LIVE" : leg.result === "pending" ? "PRE" : state.label}
+            {live ? "LIVE" : fullTime ? "FT" : leg.result === "pending" ? "PRE" : state.label}
           </span>
         </div>
 
