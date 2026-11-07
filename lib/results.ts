@@ -93,7 +93,8 @@ export async function fetchResults(ids: string[]): Promise<Map<string, MatchResu
       // started, once the kickoff clock reaches full time, so a status that
       // never flips to FT does not leave the ticket open. A fixture still
       // marked "not started" is left alone — its score is not real yet.
-      const clockOver = Boolean(f.fixture.date) && matchClock(f.fixture.date).isOver;
+      const kickoff = f.fixture.date;
+      const clockOver = kickoff ? matchClock(kickoff).isOver : false;
       const started = status !== "NS" && status !== "TBD" && status !== "PST";
       const blocked = status === "PST" || status === "CANC" || status === "ABD";
       if (blocked || (!SETTLED.has(status) && !(clockOver && started))) continue;
