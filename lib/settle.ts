@@ -70,7 +70,7 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
 
   const { data: legs } = await supabase
     .from("bet_selections")
-    .select("id, bet_id, match_id, market, outcome, result")
+    .select("id, bet_id, match_id, market, outcome, result, kickoff")
     .in(
       "bet_id",
       tickets.map((t) => t.id),
@@ -80,9 +80,14 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
     return { ticketsChecked: tickets.length, won: 0, lost: 0, stillPending: tickets.length };
   }
 
-  // Resolve every distinct match once, not once per leg.
+  // Resolve every distinct match once, not once per leg. The kickoff is what
+  // lets a finished ESPN game be found on that day's scoreboard.
   const matchIds = [...new Set(legs.map((l) => l.match_id))];
-  const results = await resolveResults(matchIds);
+  const kickoffs = new Map<string, string>();
+  for (const leg of legs) {
+    if (leg.kickoff && !kickoffs.has(leg.match_id)) kickoffs.set(leg.match_id, leg.kickoff);
+  }
+  const results = await resolveResults(matchIds, kickoffs);
 
   // Corner counts are a second upstream call, so they are only fetched for the
   // matches that actually have a corners leg riding on them.
@@ -188,7 +193,7 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
  * hand-set result; upstream fixtures come from the real finished score. A match
  * that is absent from the map simply is not settleable yet.
  */
-async function resolveResults(matchIds: string[]): Promise<Resolved> {
+async function resolveResults(matchIds: string[], kickoffs: Map<string, string>): Promise<Resolved> {
   const supabase = db();
   const out: Resolved = new Map();
   if (!supabase) return out;
@@ -267,8 +272,13 @@ async function resolveResults(matchIds: string[]): Promise<Resolved> {
   const fetchable = upstreamIds.filter((id) => !blocked.has(id));
   const apiIds = fetchable.filter((id) => !isEspnId(id));
   const espnIds = fetchable.filter((id) => isEspnId(id));
+  const espnDates = new Map<string, string>();
+  for (const id of espnIds) {
+    const iso = kickoffs.get(id);
+    if (iso) espnDates.set(id, iso);
+  }
   const upstream = await fetchResults(apiIds);
-  const espn = await fetchEspnResults(espnIds);
+  const espn = await fetchEspnResults(espnDates);
   for (const [id, score] of espn) {
     upstream.set(id, {
       home: score.home,

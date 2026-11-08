@@ -35,7 +35,10 @@ interface Side {
 }
 
 interface Competition {
-  status?: { displayClock?: string; type?: { name?: string; state?: string } };
+  status?: {
+    displayClock?: string;
+    type?: { name?: string; state?: string; completed?: boolean };
+  };
   venue?: { address?: { country?: string } };
   altGameNote?: string;
   competitors?: {
@@ -169,42 +172,53 @@ export interface EspnScore {
 }
 
 /**
- * Full-time score for an ESPN fixture, once the scoreboard says the match is
- * over. A missing or still-running event comes back empty so the ticket stays
- * open rather than being settled on a guess.
+ * Final scores for ESPN fixtures, for settlement.
+ *
+ * The bet stores the kickoff, so each match is read off that day's scoreboard
+ * — the same place a finished game stays after it has left the live board.
+ * Only a match ESPN marks completed, with both scores present, is returned.
+ * Anything less stays pending. Nothing is guessed.
  */
-export async function fetchEspnResults(ids: string[]): Promise<Map<string, EspnScore>> {
+export async function fetchEspnResults(idToKickoff: Map<string, string>): Promise<Map<string, EspnScore>> {
   const out = new Map<string, EspnScore>();
+  if (idToKickoff.size === 0) return out;
 
-  for (const full of ids) {
+  const byDate = new Map<string, Set<string>>();
+  for (const [full, iso] of idToKickoff) {
     if (!isEspnId(full)) continue;
-    const id = full.slice(ESPN_ID_PREFIX.length);
+    const date = (iso ?? "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const set = byDate.get(date) ?? new Set<string>();
+    set.add(full.slice(ESPN_ID_PREFIX.length));
+    byDate.set(date, set);
+  }
+
+  for (const [date, rawIds] of byDate) {
     try {
-      const res = await fetch(
-        `https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event=${encodeURIComponent(id)}`,
-        { cache: "no-store" },
-      );
+      const res = await fetch(`${SCOREBOARD}?dates=${date.replace(/-/g, "")}&limit=300`, {
+        cache: "no-store",
+      });
       if (!res.ok) continue;
-      const json = (await res.json()) as {
-        header?: { competitions?: Competition[] };
-      };
-      const comp = json.header?.competitions?.[0] as (Competition & { date?: string }) | undefined;
-      const state = comp?.status?.type?.state;
-      const home = comp?.competitors?.find((c) => c.homeAway === "home");
-      const away = comp?.competitors?.find((c) => c.homeAway === "away");
-      const homeScore = Number(home?.score);
-      const awayScore = Number(away?.score);
-      if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) continue;
-      const kickoff = comp?.date;
-      const over = Boolean(kickoff) && matchClock(kickoff as string).isOver;
-      // "post" is the official finish. Once our clock is past full time, a
-      // score from a match that actually started is the result too. A match
-      // the feed still calls pre-match is left alone, so a placeholder 0-0
-      // is never paid.
-      if (state !== "post" && !(over && state !== "pre")) continue;
-      out.set(full, { home: homeScore, away: awayScore });
+      const json = (await res.json()) as { events?: Event[] };
+      for (const ev of json.events ?? []) {
+        if (!rawIds.has(String(ev.id))) continue;
+        const comp = ev.competitions?.[0];
+        const type = comp?.status?.type;
+        if (!type?.completed || type.state !== "post") continue;
+        if (
+          type.name === "STATUS_POSTPONED" ||
+          type.name === "STATUS_CANCELED" ||
+          type.name === "STATUS_ABANDONED"
+        ) {
+          continue;
+        }
+        const home = Number(comp?.competitors?.find((c) => c.homeAway === "home")?.score);
+        const away = Number(comp?.competitors?.find((c) => c.homeAway === "away")?.score);
+        if (!Number.isFinite(home) || !Number.isFinite(away)) continue;
+        out.set(`${ESPN_ID_PREFIX}${ev.id}`, { home, away });
+      }
     } catch (err) {
-      console.error("[espn] result", id, err);
+      console.error("[espn] result", date, err);
     }
   }
 
