@@ -17,13 +17,15 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const feed = await getFeed();
 
-  // Both are throttled internally and neither is allowed to fail the response.
-  const work = Promise.allSettled([settleBets(), dispatchGoalAlerts(feed)]);
-  work.then((results) => {
-    for (const r of results) {
-      if (r.status === "rejected") console.error("[fixtures] background work failed", r.reason);
-    }
-  });
+  // Wait for settlement before answering. A finished match's tickets are
+  // judged on this same poll, the way the feed is polled every 30 seconds.
+  // Returning first lets the host freeze the function before the write lands,
+  // which is how a full-time ticket stayed open. A failure here still returns
+  // the board.
+  const results = await Promise.allSettled([settleBets(), dispatchGoalAlerts(feed)]);
+  for (const r of results) {
+    if (r.status === "rejected") console.error("[fixtures] background work failed", r.reason);
+  }
 
   return NextResponse.json(
     { matches: feed, count: feed.length, at: new Date().toISOString() },

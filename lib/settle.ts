@@ -1,4 +1,4 @@
-import { db } from "./supabase";
+import { db, missingColumn } from "./supabase";
 import { matchClock, scoreFromTimeline } from "./clock";
 import { fetchResults, attachCorners, type MatchResult } from "./results";
 import { fetchEspnResults, isEspnId } from "./espn";
@@ -23,6 +23,10 @@ import { roundMoney, stakeToWallet } from "./fx";
  */
 
 const THROTTLE_MS = 25_000;
+/** Tickets per page; also keeps each legs lookup's id list a safe length. */
+const PAGE_SIZE = 200;
+/** Up to 5,000 tickets per run, so one poll can never run unbounded. */
+const MAX_PAGES = 25;
 let lastRun = 0;
 
 export interface SettleReport {
@@ -40,6 +44,7 @@ type Leg = {
   market: string;
   outcome: string;
   result: string;
+  kickoff?: string | null;
 };
 
 /** A judged leg needs the market key as well as the outcome. */
@@ -55,36 +60,92 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
   }
   lastRun = now;
 
-  let query = supabase
-    .from("bets")
-    .select("id, user_id, stake, total_odds, potential_win, currency, status")
-    .eq("status", "pending")
-    .limit(200);
+  // Every pending ticket is visited, a page at a time. Walking by id (rather
+  // than by offset) means a ticket that settles mid-run cannot shift the next
+  // page and make another one get skipped. The page cap only bounds one run's
+  // time; whatever is left is picked up by the next run.
+  const total: SettleReport = { ticketsChecked: 0, won: 0, lost: 0, stillPending: 0 };
+  let after: string | null = null;
 
-  if (opts.userId) query = query.eq("user_id", opts.userId);
+  for (let page = 0; page < MAX_PAGES; page++) {
+    let query = supabase
+      .from("bets")
+      .select("id, user_id, stake, total_odds, potential_win, currency, status")
+      .eq("status", "pending")
+      .order("id", { ascending: true })
+      .limit(PAGE_SIZE);
+    if (opts.userId) query = query.eq("user_id", opts.userId);
+    if (after) query = query.gt("id", after);
 
-  const { data: tickets, error } = await query;
-  if (error || !tickets?.length) {
-    return { ticketsChecked: 0, won: 0, lost: 0, stillPending: 0 };
+    const { data, error } = await query;
+    if (error) {
+      console.error("[settle] could not load tickets", error);
+      break;
+    }
+    const tickets = (data ?? []) as Ticket[];
+    if (!tickets.length) break;
+
+    const part = await settleBatch(tickets);
+    total.ticketsChecked += part.ticketsChecked;
+    total.won += part.won;
+    total.lost += part.lost;
+    total.stillPending += part.stillPending;
+
+    if (tickets.length < PAGE_SIZE) break;
+    after = String(tickets[tickets.length - 1].id);
   }
 
-  const { data: legs } = await supabase
+  if (total.won || total.lost) {
+    console.info("[settle]", total);
+  }
+  return total;
+}
+
+type Ticket = {
+  id: string;
+  user_id: string;
+  potential_win: number | string;
+  currency: string | null;
+};
+
+/** Settles one page of pending tickets. */
+async function settleBatch(tickets: Ticket[]): Promise<SettleReport> {
+  const supabase = db();
+  if (!supabase) return { ticketsChecked: 0, won: 0, lost: 0, stillPending: 0 };
+
+  // Kickoff is what finds a finished ESPN game on that day's scoreboard.
+  // A database that has not added the column yet still settles; it just
+  // cannot look those games up by date.
+  const betIds = tickets.map((t) => t.id);
+  const withKickoff = await supabase
     .from("bet_selections")
     .select("id, bet_id, match_id, market, outcome, result, kickoff")
-    .in(
-      "bet_id",
-      tickets.map((t) => t.id),
-    );
+    .in("bet_id", betIds);
+  let legs: Leg[] | null = withKickoff.data as Leg[] | null;
+  let legsError = withKickoff.error;
+  if (missingColumn(legsError, "kickoff")) {
+    const without = await supabase
+      .from("bet_selections")
+      .select("id, bet_id, match_id, market, outcome, result")
+      .in("bet_id", betIds);
+    legs = without.data as Leg[] | null;
+    legsError = without.error;
+  }
+  if (legsError) {
+    console.error("[settle] could not load legs", legsError);
+    return { ticketsChecked: tickets.length, won: 0, lost: 0, stillPending: tickets.length };
+  }
 
-  if (!legs?.length) {
+  const rows = (legs ?? []) as Leg[];
+  if (!rows.length) {
     return { ticketsChecked: tickets.length, won: 0, lost: 0, stillPending: tickets.length };
   }
 
   // Resolve every distinct match once, not once per leg. The kickoff is what
   // lets a finished ESPN game be found on that day's scoreboard.
-  const matchIds = [...new Set(legs.map((l) => l.match_id))];
+  const matchIds = [...new Set(rows.map((l) => l.match_id))];
   const kickoffs = new Map<string, string>();
-  for (const leg of legs) {
+  for (const leg of rows) {
     if (leg.kickoff && !kickoffs.has(leg.match_id)) kickoffs.set(leg.match_id, leg.kickoff);
   }
   const results = await resolveResults(matchIds, kickoffs);
@@ -92,7 +153,7 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
   // Corner counts are a second upstream call, so they are only fetched for the
   // matches that actually have a corners leg riding on them.
   const needCorners = new Set(
-    (legs as Leg[]).filter((l) => CORNER_MARKETS.has(l.market)).map((l) => l.match_id),
+    rows.filter((l) => CORNER_MARKETS.has(l.market)).map((l) => l.match_id),
   );
   for (const id of needCorners) {
     const r = results.get(id);
@@ -103,7 +164,7 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
 
   const report: SettleReport = { ticketsChecked: tickets.length, won: 0, lost: 0, stillPending: 0 };
   const byTicket = new Map<string, Leg[]>();
-  for (const l of legs as Leg[]) {
+  for (const l of rows) {
     const list = byTicket.get(l.bet_id) ?? [];
     list.push(l);
     byTicket.set(l.bet_id, list);
@@ -180,9 +241,6 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
     report.stillPending++;
   }
 
-  if (report.won || report.lost) {
-    console.info("[settle]", report);
-  }
   return report;
 }
 

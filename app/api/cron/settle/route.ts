@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 /**
  * Settlement backstop for a site with no traffic.
  *
- * Most settlement rides on the fixture feed; this exists so a quiet day still
- * settles. Note the cadence in vercel.json is daily, not per-minute — see the
- * Known gaps section of the README.
+ * Most settlement rides on the fixture feed; this exists so a quiet site still
+ * settles. Supabase calls it every minute (migration 0018_settle_schedule);
+ * the daily Vercel cron in vercel.json stays as a second safety net.
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;

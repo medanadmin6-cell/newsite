@@ -6,6 +6,41 @@ import { useAdminData, adminAction, Panel, Table, Badge, Button } from "@/compon
 import { useDialog, validators } from "@/components/admin/Dialog";
 import { GoalTimeline, type Goal } from "@/components/admin/GoalTimeline";
 import { CrestPicker } from "@/components/admin/CrestPicker";
+import { matchClock, scoreFromTimeline } from "@/lib/clock";
+
+/**
+ * The state players actually see. The board and settlement both run off the
+ * kickoff clock, so this does too. Reading only the stored flags showed a
+ * running or finished match as "Upcoming", because the clock never writes
+ * them back.
+ */
+function StateBadge({ m }: { m: CustomMatch }) {
+  if (m.finished) {
+    return (
+      <Badge tone="muted">
+        FT {m.final_home}-{m.final_away}
+      </Badge>
+    );
+  }
+  const clock = matchClock(m.kickoff, m.sport ?? "football");
+  if (clock.isOver) {
+    const s = scoreFromTimeline(m.goal_timeline ?? [], clock);
+    return (
+      <Badge tone="muted">
+        FT {s.home}-{s.away}
+      </Badge>
+    );
+  }
+  if (clock.isLive || m.is_live) {
+    const s = scoreFromTimeline(m.goal_timeline ?? [], clock);
+    return (
+      <Badge tone="lose">
+        Live {clock.isLive ? clock.label : ""} {s.home}-{s.away}
+      </Badge>
+    );
+  }
+  return <Badge tone="pending">Upcoming</Badge>;
+}
 
 interface CustomMatch {
   id: string;
@@ -14,6 +49,7 @@ interface CustomMatch {
   home_crest: string | null;
   away_crest: string | null;
   league: string;
+  sport?: string | null;
   kickoff: string;
   odds_home: number;
   odds_draw: number;
@@ -215,15 +251,7 @@ export default function CustomMatchesPage() {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-1">
-                    {m.finished ? (
-                      <Badge tone="muted">
-                        FT {m.final_home}-{m.final_away}
-                      </Badge>
-                    ) : m.is_live ? (
-                      <Badge tone="lose">Live</Badge>
-                    ) : (
-                      <Badge tone="pending">Upcoming</Badge>
-                    )}
+                    <StateBadge m={m} />
                     {m.is_locked && <Badge tone="muted">Locked</Badge>}
                     {m.best_odds && <Badge tone="win">Boost</Badge>}
                   </div>

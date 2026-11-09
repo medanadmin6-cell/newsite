@@ -84,7 +84,8 @@ Automatic, running from four places that all call the same function and are all 
 - the fixture feed, throttled to once every 25 seconds — so while the site has any traffic at all, finished matches settle within about half a minute;
 - a player opening My Bets, settling just their own tickets;
 - an operator opening the admin bets list, settling everything;
-- a daily Vercel cron as a backstop for a site with no traffic.
+- a Supabase schedule that calls `/api/cron/settle` every minute, so a site with no traffic still settles (migration `0018_settle_schedule.sql`; it needs the `site_url` and `cron_secret` Vault secrets described in that file);
+- a daily Vercel cron as a last backstop.
 
 Only the match-result (1X2) market is judged automatically, and only off a final score — which in practice means custom matches and any upstream fixture the operator has scored by hand. Any leg the system cannot judge with certainty stays pending rather than being guessed at.
 
@@ -106,7 +107,7 @@ Most of it rides on ordinary traffic rather than a scheduler, so the platform ke
 
 | Job | Trigger | Throttle |
 | --- | --- | --- |
-| Settle finished bets | Fixture feed, My Bets, admin bets list, daily cron | 25s per instance |
+| Settle finished bets | Fixture feed, My Bets, admin bets list, Supabase schedule (every minute), daily cron | 25s per instance |
 | Goal alerts | Every fixture-feed poll | 15s per instance |
 | Deposit reconciliation | Account screen load | None — idempotent |
 | Popularity counts | First fixture list per page view | Once per page view |
@@ -120,7 +121,6 @@ Written plainly, because these matter more than the features when deciding what 
 - **Automatic settlement covers the match-result market only**, and only for fixtures with a final score. Everything else waits for the operator.
 - **The winners ticker on the home page is a marketing prop**: masked numbers and amounts are generated, not read from real settled tickets.
 - **The in-app support chat answers from a fixed script.** It is not connected to a person or a model.
-- **The settlement cron runs once a day**, not every minute. Settlement in practice depends on site traffic — fine while the site is busy, slow when it is not.
 - **Web Push delivery is stubbed.** Goal alerts resolve their recipients and log the payload; wiring an actual push provider is a small, isolated change in `lib/goals.ts`.
 - **Database migrations are applied by hand.** The app survives an un-run migration by falling back, but features stay dark until the SQL is run.
 

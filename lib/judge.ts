@@ -339,17 +339,45 @@ function winEitherHalf(o: string, r: MatchResult): Verdict {
 /** Markets that need corner counts, so settlement knows when to fetch them. */
 export const CORNER_MARKETS = new Set(["af45", "af55", "af57", "af58", "af85", "af338", "af339"]);
 
-export function canJudge(marketKey: string): boolean {
-  return marketKey in JUDGES;
+/**
+ * A stored key is usually `cs` or `af10`. A slip that kept the name the
+ * player saw ("Correct Score", "Match Result") still settles off a real
+ * score. Half, corner, and card markets are left alone — those need data
+ * this fallback does not have.
+ */
+function judgeFor(marketKey: string): Judge | undefined {
+  const direct = JUDGES[marketKey];
+  if (direct) return direct;
+  const key = marketKey.trim().toLowerCase();
+  if (
+    key.includes("half") ||
+    key.includes("corner") ||
+    key.includes("card") ||
+    key.includes("handicap") ||
+    key.includes("ht/ft") ||
+    key.includes("ht / ft")
+  ) {
+    return undefined;
+  }
+  if (key === "correct score" || key === "correctscore") return JUDGES.cs;
+  if (key === "match result" || key === "match winner" || key === "1x2") return JUDGES["1x2"];
+  if (key === "both teams to score" || key === "both teams score" || key === "btts" || key === "gg/ng") {
+    return JUDGES.af8;
+  }
+  if (key === "double chance") return JUDGES.af12;
+  if (key === "over/under" || key === "over / under" || key === "total goals" || key === "goals over/under" || key === "o/u") {
+    return JUDGES.af5;
+  }
+  return undefined;
 }
 
-/**
- * Judge one leg. Returns null whenever the market is unknown, the data needed
- * is missing, or the outcome cannot be parsed — the leg then stays pending.
- */
+export function canJudge(marketKey: string): boolean {
+  return judgeFor(marketKey) !== undefined;
+}
+
 export function judge(marketKey: string, outcome: string, result: MatchResult): Verdict {
   if (!result.finished) return null;
-  const fn = JUDGES[marketKey];
+  const fn = judgeFor(marketKey);
   if (!fn) return null;
   try {
     return fn(outcome, result);
