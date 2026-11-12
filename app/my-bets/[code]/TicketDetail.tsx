@@ -277,7 +277,7 @@ export function TicketDetail({ code }: { code: string }) {
 
   const { bet, selections, cashout: offer } = data;
   const running = selections.some((leg) => legIsLive(leg, nowMs));
-  const waiting = selections.filter((leg) => leg.result !== "won" && leg.result !== "lost");
+  const waiting = selections.filter((leg) => !legSettled(leg));
   const finished = !running && waiting.length > 0 && waiting.every((leg) => legIsOver(leg, nowMs));
   const status = STATUS[bet.status] ?? STATUS.pending;
   const settled = bet.status !== "pending";
@@ -538,14 +538,19 @@ function legClock(leg: Leg, nowMs: number) {
   return matchClock(leg.kickoff, leg.sport || "football", new Date(nowMs));
 }
 
+/** Won, lost, or void: the leg has its answer and the clock no longer matters. */
+function legSettled(leg: Leg): boolean {
+  return leg.result === "won" || leg.result === "lost" || leg.result === "void";
+}
+
 function legIsLive(leg: Leg, nowMs: number): boolean {
-  if (leg.result === "won" || leg.result === "lost") return false;
+  if (legSettled(leg)) return false;
   if (leg.isLive) return true;
   return Boolean(legClock(leg, nowMs)?.isLive);
 }
 
 function legIsOver(leg: Leg, nowMs: number): boolean {
-  if (leg.result === "won" || leg.result === "lost") return false;
+  if (legSettled(leg)) return false;
   return Boolean(legClock(leg, nowMs)?.isOver);
 }
 
@@ -554,13 +559,15 @@ function LegCard({ leg }: { leg: Leg }) {
   const clock =
     leg.kickoff && nowMs > 0 ? matchClock(leg.kickoff, leg.sport || "football", new Date(nowMs)) : null;
   const live = legIsLive(leg, nowMs);
-  const fullTime = Boolean(clock?.isOver) && leg.result !== "won" && leg.result !== "lost";
+  const fullTime = Boolean(clock?.isOver) && !legSettled(leg);
   const state =
     leg.result === "won"
       ? { label: "WON", colour: "var(--win)" }
       : leg.result === "lost"
         ? { label: "LOST", colour: "var(--lose)" }
-        : live
+        : leg.result === "void"
+          ? { label: "VOID", colour: "var(--text-muted)" }
+          : live
           ? { label: "LIVE", colour: "var(--live)" }
           : fullTime
             ? { label: "FULL TIME", colour: "var(--text-muted)" }

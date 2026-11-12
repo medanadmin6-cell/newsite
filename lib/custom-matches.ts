@@ -200,6 +200,32 @@ export async function deleteCustomMatch(id: string | null, ownerId: string | nul
   if (!supabase) return { ok: false as const, status: 503, error: "Service unavailable" };
   if (!id) return { ok: false as const, status: 400, error: "Invalid request" };
 
+  // A ticket on a custom match is settled from this row. Deleting it while a
+  // ticket is still open leaves that ticket pending forever, so the match has
+  // to be finalised (or finish on the clock) and settle first.
+  const { data: onMatch, error: legsError } = await supabase
+    .from("bet_selections")
+    .select("bet_id")
+    .eq("match_id", `cm_${id}`)
+    .limit(1000);
+  if (legsError) return { ok: false as const, status: 500, error: "Could not check tickets on this match" };
+  const betIds = [...new Set((onMatch ?? []).map((l) => l.bet_id))];
+  if (betIds.length) {
+    const { count, error: betsError } = await supabase
+      .from("bets")
+      .select("id", { count: "exact", head: true })
+      .in("id", betIds)
+      .eq("status", "pending");
+    if (betsError) return { ok: false as const, status: 500, error: "Could not check tickets on this match" };
+    if (count) {
+      return {
+        ok: false as const,
+        status: 409,
+        error: `${count} open ticket${count === 1 ? " is" : "s are"} on this match. Finalise the result so they settle, then delete it.`,
+      };
+    }
+  }
+
   const apply = (owned: boolean) => {
     let query = supabase.from("custom_matches").delete().eq("id", id);
     if (owned && ownerId) query = query.eq("created_by", ownerId);

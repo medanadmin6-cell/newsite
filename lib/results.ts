@@ -44,7 +44,16 @@ async function call<T>(path: string): Promise<T | null> {
       console.error("[results]", path, res.status);
       return null;
     }
-    const json = (await res.json()) as { response?: T };
+    const json = (await res.json()) as { response?: T; errors?: unknown };
+    // API-Football answers a spent daily quota, a bad key, or a season the
+    // plan cannot see with 200 and an empty list. Without this the match just
+    // never settles and nothing says why.
+    const errors = json.errors;
+    const hasErrors = Array.isArray(errors) ? errors.length > 0 : Boolean(errors && Object.keys(errors).length);
+    if (hasErrors) {
+      console.error("[results] API-Football refused", path, JSON.stringify(errors));
+      return null;
+    }
     return (json.response ?? null) as T | null;
   } catch (err) {
     console.error("[results] threw", path, err);

@@ -34,6 +34,8 @@ export interface SettleReport {
   ticketsChecked: number;
   won: number;
   lost: number;
+  /** Tickets whose every leg was void, so the stake was returned. */
+  voided?: number;
   stillPending: number;
 }
 
@@ -43,6 +45,7 @@ type Leg = {
   match_id: string;
   market: string;
   outcome: string;
+  odds?: number | string | null;
   result: string;
   kickoff?: string | null;
 };
@@ -89,13 +92,14 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
     total.ticketsChecked += part.ticketsChecked;
     total.won += part.won;
     total.lost += part.lost;
+    if (part.voided) total.voided = (total.voided ?? 0) + part.voided;
     total.stillPending += part.stillPending;
 
     if (tickets.length < PAGE_SIZE) break;
     after = String(tickets[tickets.length - 1].id);
   }
 
-  if (total.won || total.lost) {
+  if (total.won || total.lost || total.voided) {
     console.info("[settle]", total);
   }
   return total;
@@ -104,6 +108,7 @@ export async function settleBets(opts: { userId?: string; force?: boolean } = {}
 type Ticket = {
   id: string;
   user_id: string;
+  stake: number | string;
   potential_win: number | string;
   currency: string | null;
 };
@@ -119,14 +124,14 @@ async function settleBatch(tickets: Ticket[]): Promise<SettleReport> {
   const betIds = tickets.map((t) => t.id);
   const withKickoff = await supabase
     .from("bet_selections")
-    .select("id, bet_id, match_id, market, outcome, result, kickoff")
+    .select("id, bet_id, match_id, market, outcome, odds, result, kickoff")
     .in("bet_id", betIds);
   let legs: Leg[] | null = withKickoff.data as Leg[] | null;
   let legsError = withKickoff.error;
   if (missingColumn(legsError, "kickoff")) {
     const without = await supabase
       .from("bet_selections")
-      .select("id, bet_id, match_id, market, outcome, result")
+      .select("id, bet_id, match_id, market, outcome, odds, result")
       .in("bet_id", betIds);
     legs = without.data as Leg[] | null;
     legsError = without.error;
@@ -148,7 +153,7 @@ async function settleBatch(tickets: Ticket[]): Promise<SettleReport> {
   for (const leg of rows) {
     if (leg.kickoff && !kickoffs.has(leg.match_id)) kickoffs.set(leg.match_id, leg.kickoff);
   }
-  const results = await resolveResults(matchIds, kickoffs);
+  const { results, voided } = await resolveResults(matchIds, kickoffs);
 
   // Corner counts are a second upstream call, so they are only fetched for the
   // matches that actually have a corners leg riding on them.
@@ -174,11 +179,26 @@ async function settleBatch(tickets: Ticket[]): Promise<SettleReport> {
     const ticketLegs = byTicket.get(ticket.id) ?? [];
     let anyLost = false;
     let allWon = ticketLegs.length > 0;
+    // Legs that count at odds 1.00 because their match no longer exists.
+    const voidLegs = new Set<string>();
 
     for (const leg of ticketLegs) {
       if (leg.result === "won") continue;
+      if (leg.result === "void") {
+        voidLegs.add(leg.id);
+        continue;
+      }
       if (leg.result === "lost") {
         anyLost = true;
+        continue;
+      }
+
+      // The operator deleted this custom match, so it can never produce a
+      // score. The usual bookmaker rule applies: the leg is void and the rest
+      // of the ticket stands on its own.
+      if (voided.has(leg.match_id)) {
+        await supabase.from("bet_selections").update({ result: "void" }).eq("id", leg.id);
+        voidLegs.add(leg.id);
         continue;
       }
 
@@ -222,10 +242,22 @@ async function settleBatch(tickets: Ticket[]): Promise<SettleReport> {
     if (allWon) {
       // The guarded update is what makes double-crediting impossible: only the
       // run that actually transitions the ticket out of pending pays out.
-      const payout = Number(ticket.potential_win);
+      //
+      // A void leg pays at 1.00: the stake rides on the legs that were judged,
+      // and the accumulator bonus no longer applies. Every leg void means the
+      // stake comes back and the ticket itself is void.
+      const allVoid = voidLegs.size === ticketLegs.length;
+      let payout = Number(ticket.potential_win);
+      if (voidLegs.size) {
+        const odds = ticketLegs
+          .filter((l) => !voidLegs.has(l.id))
+          .reduce((acc, l) => acc * (Number(l.odds) > 1 ? Number(l.odds) : 1), 1);
+        payout = Math.min(payout, roundMoney(Number(ticket.stake) * odds));
+      }
+      const status = allVoid ? "void" : "won";
       const { data: transitioned } = await supabase
         .from("bets")
-        .update({ status: "won", settled_at: new Date().toISOString(), payout })
+        .update({ status, settled_at: new Date().toISOString(), payout })
         .eq("id", ticket.id)
         .eq("status", "pending")
         .select("id")
@@ -233,7 +265,8 @@ async function settleBatch(tickets: Ticket[]): Promise<SettleReport> {
 
       if (transitioned) {
         await creditWinnings(ticket.user_id, payout, String(ticket.currency ?? ""));
-        report.won++;
+        if (allVoid) report.voided = (report.voided ?? 0) + 1;
+        else report.won++;
       }
       continue;
     }
@@ -250,8 +283,24 @@ async function settleBatch(tickets: Ticket[]): Promise<SettleReport> {
  * Operator-created fixtures are resolved from their own scripted timeline or a
  * hand-set result; upstream fixtures come from the real finished score. A match
  * that is absent from the map simply is not settleable yet.
+ *
+ * `voided` lists custom matches whose row is gone: the operator deleted them,
+ * so they will never have a score and their legs are void.
  */
-async function resolveResults(matchIds: string[], kickoffs: Map<string, string>): Promise<Resolved> {
+async function resolveResults(
+  matchIds: string[],
+  kickoffs: Map<string, string>,
+): Promise<{ results: Resolved; voided: Set<string> }> {
+  const voided = new Set<string>();
+  const out = await resolveInto(matchIds, kickoffs, voided);
+  return { results: out, voided };
+}
+
+async function resolveInto(
+  matchIds: string[],
+  kickoffs: Map<string, string>,
+  voided: Set<string>,
+): Promise<Resolved> {
   const supabase = db();
   const out: Resolved = new Map();
   if (!supabase) return out;
@@ -260,10 +309,17 @@ async function resolveResults(matchIds: string[], kickoffs: Map<string, string>)
   const customIds = matchIds.filter((id) => id.startsWith("cm_")).map((id) => id.slice(3));
 
   if (customIds.length) {
-    const { data: matches } = await supabase
+    const { data: matches, error: matchesError } = await supabase
       .from("custom_matches")
       .select("id, kickoff, sport, goal_timeline, final_home, final_away, finished")
       .in("id", customIds);
+
+    // Only a lookup that answered can say a match is gone. A failed query
+    // must never void anything: it just leaves the legs pending.
+    if (!matchesError && matches) {
+      const present = new Set(matches.map((m) => String(m.id)));
+      for (const id of customIds) if (!present.has(id)) voided.add(`cm_${id}`);
+    }
 
     for (const m of matches ?? []) {
       // An operator "Set result" is authoritative and ends the argument.

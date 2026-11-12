@@ -154,7 +154,7 @@ export default function CustomMatchesPage() {
   const remove = async (m: CustomMatch) => {
     const ok = await confirm({
       title: "Delete this match?",
-      description: `${m.home_team} v ${m.away_team} is removed from the board. Tickets already placed on it are not refunded automatically.`,
+      description: `${m.home_team} v ${m.away_team} is removed from the board. A match with open tickets cannot be deleted — finalise it first so they settle.`,
       confirmLabel: "Delete",
     });
     if (!ok) return;
