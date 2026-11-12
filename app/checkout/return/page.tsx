@@ -73,7 +73,7 @@ function Return() {
           <X size={34} strokeWidth={3} />
         </div>
         <h1 className="text-[20px] font-black">Payment not completed</h1>
-        <p className="text-[13px] text-[var(--text-muted)]">Nothing was taken from your card.</p>
+        <p className="text-[13px] text-[var(--text-muted)]">Nothing was taken from your account.</p>
         <button
           onClick={() => router.push("/deposit")}
           className="w-full rounded-full bg-[var(--accent)] py-3 text-[14px] font-black text-white"

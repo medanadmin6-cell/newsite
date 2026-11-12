@@ -851,6 +851,136 @@ const akwapay: GatewayAdapter = {
   },
 };
 
+// ---------------------------------------------------------------- AlphaPay
+
+const ALPHAPAY_BASE = "https://api.edibytes.online/api";
+
+/**
+ * The domain every AlphaPay collection must declare. It has to be whitelisted
+ * on their dashboard or initialize answers 403, so it is pinned by env rather
+ * than read off the request: a preview deployment or localhost would otherwise
+ * be refused with nothing to explain why.
+ */
+function alphapayDomain(redirectUrl: string): string {
+  const pinned = env("ALPHAPAY_DOMAIN");
+  if (pinned) return pinned.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  return new URL(redirectUrl).hostname;
+}
+
+/**
+ * AlphaPay: Ghana mobile money behind their own hosted OTP page.
+ *
+ * Every collection is gated by an SMS code they send the customer, and the
+ * code is entered on their checkout page, never ours. So initialize is called
+ * with the number already known, and the player is redirected straight to the
+ * code-entry step. Only a correct code dispatches the real charge.
+ *
+ * Amounts are whole cedis as decimals in both directions — 50.00 is GH₵50, not
+ * pesewas. Our own reference is theirs too, so status is asked by reference.
+ *
+ * callback_url receives both a browser redirect and a signed POST, so it points
+ * at the webhook route, which answers each in its own way.
+ */
+const alphapay: GatewayAdapter = {
+  id: "alphapay",
+  label: "Mobile Money",
+  async start({ reference, amount, currency, phone, redirectUrl }) {
+    const key = env("ALPHAPAY_SECRET_KEY");
+    if (!key) return { ok: false, error: "Mobile money is not available right now" };
+
+    const origin = new URL(redirectUrl).origin;
+    const callbackUrl = `${origin}/api/deposits/webhook?provider=alphapay&reference=${encodeURIComponent(reference)}`;
+
+    try {
+      const res = await fetch(`${ALPHAPAY_BASE}/payments/initialize/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Math.round(amount * 100) / 100,
+          currency: currency || "GHS",
+          reference,
+          domain: alphapayDomain(redirectUrl),
+          phone_number: localGhanaNumber(phone),
+          callback_url: callbackUrl,
+        }),
+        signal: AbortSignal.timeout(25_000),
+      });
+
+      const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+      const id = json?.id != null ? String(json.id) : undefined;
+      const metadata = id ? { alphapayId: id } : undefined;
+
+      if (res.ok) {
+        const checkoutUrl = typeof json?.checkout_url === "string" ? json.checkout_url : undefined;
+        // With OTP switched off on the account there is no page to send the
+        // player to: the prompt has already gone to the handset.
+        return checkoutUrl
+          ? { ok: true, metadata, redirectUrl: checkoutUrl }
+          : { ok: true, metadata, awaitingPrompt: true };
+      }
+
+      const error = (json?.error ?? {}) as Record<string, unknown>;
+      console.error("[alphapay] initialize refused", {
+        reference,
+        status: res.status,
+        type: error.type,
+        message: error.message,
+      });
+
+      // 401 is a bad key, 403 a domain not whitelisted. Both are ours to fix.
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, metadata, error: "Deposits are being set up. Please try again shortly." };
+      }
+      if (res.status >= 500) {
+        return { ok: false, metadata, error: "The payment service is busy. Please try again in a minute." };
+      }
+      return { ok: false, metadata, error: "Could not start your payment. Check the number and try again." };
+    } catch (err) {
+      // Nothing is charged before the OTP is entered, so a start that never
+      // answered has no prompt in flight. It is safe to call it a failure.
+      console.error("[alphapay] initialize did not answer", { reference, err });
+      return { ok: false, error: "Could not start your payment. Please try again." };
+    }
+  },
+
+  async status(reference) {
+    const key = env("ALPHAPAY_SECRET_KEY");
+    if (!key) return { status: "pending" };
+
+    try {
+      const res = await fetch(`${ALPHAPAY_BASE}/payments/verify/${encodeURIComponent(reference)}/`, {
+        headers: { Authorization: `Bearer ${key}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) return { status: "pending" };
+
+      const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+      const data = (json?.data ?? json ?? {}) as Record<string, unknown>;
+      const state = String(data.status ?? "").toLowerCase();
+
+      if (state === "success") {
+        const paid = Number(data.amount);
+        return {
+          status: "confirmed",
+          paidAmount: Number.isFinite(paid) && paid > 0 ? paid : undefined,
+          paidCurrency: typeof data.currency === "string" ? data.currency : undefined,
+        };
+      }
+      if (state === "failed") return { status: "failed" };
+
+      // pending and otp_required are the player still on the code or the
+      // prompt. Anything unknown is left pending rather than read as refused.
+      if (state && !["pending", "otp_required"].includes(state)) {
+        console.warn("[alphapay] unmapped status", { reference, state });
+      }
+      return { status: "pending" };
+    } catch {
+      return { status: "pending" };
+    }
+  },
+};
+
 const manual: GatewayAdapter = {
   id: "manual",
   label: "Mobile money transfer",
@@ -869,6 +999,7 @@ const ADAPTERS: Record<Gateway, GatewayAdapter> = {
   theteller,
   pycue,
   akwapay,
+  alphapay,
   manual,
 };
 
