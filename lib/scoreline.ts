@@ -184,3 +184,95 @@ export function goalCountMarkets(home: number, draw: number, away: number): Mark
     },
   ];
 }
+
+/**
+ * The rest of the board: another goals line, the team markets, and the
+ * result/both-teams combination.
+ *
+ * All of it is read off the same fitted grid as the correct-score market, so
+ * every price on the page agrees with the 1X2 it was derived from. A player
+ * cannot back "home to score" and "home clean sheet" against each other and
+ * come out ahead of the book.
+ */
+export function teamMarkets(home: number, draw: number, away: number): Market[] {
+  const rates = ratesFromOdds(home, draw, away);
+
+  // A wider grid than the scoreline card uses: these are sums, so the tail
+  // matters more than it does for a single quoted cell.
+  const N = 12;
+  const ph: number[] = [];
+  const pa: number[] = [];
+  for (let i = 0; i <= N; i++) {
+    ph[i] = poisson(i, rates.home);
+    pa[i] = poisson(i, rates.away);
+  }
+
+  const combo = { h_y: 0, h_n: 0, d_y: 0, d_n: 0, a_y: 0, a_n: 0 };
+
+  for (let i = 0; i <= N; i++) {
+    for (let j = 0; j <= N; j++) {
+      const p = ph[i] * pa[j];
+      const btts = i > 0 && j > 0;
+      if (i > j) combo[btts ? "h_y" : "h_n"] += p;
+      else if (i === j) combo[btts ? "d_y" : "d_n"] += p;
+      else combo[btts ? "a_y" : "a_n"] += p;
+    }
+  }
+
+  const homeScores = 1 - ph[0];
+  const awayScores = 1 - pa[0];
+
+  return [
+    {
+      key: "hts",
+      label: "Home team to score",
+      group: "teams",
+      prices: [
+        { outcome: "Yes", label: "Yes", odds: price(homeScores) },
+        { outcome: "No", label: "No", odds: price(1 - homeScores) },
+      ],
+    },
+    {
+      key: "ats",
+      label: "Away team to score",
+      group: "teams",
+      prices: [
+        { outcome: "Yes", label: "Yes", odds: price(awayScores) },
+        { outcome: "No", label: "No", odds: price(1 - awayScores) },
+      ],
+    },
+    {
+      // A clean sheet for the home side means the away side failed to score.
+      key: "csh",
+      label: "Home clean sheet",
+      group: "teams",
+      prices: [
+        { outcome: "Yes", label: "Yes", odds: price(pa[0]) },
+        { outcome: "No", label: "No", odds: price(1 - pa[0]) },
+      ],
+    },
+    {
+      key: "csa",
+      label: "Away clean sheet",
+      group: "teams",
+      prices: [
+        { outcome: "Yes", label: "Yes", odds: price(ph[0]) },
+        { outcome: "No", label: "No", odds: price(1 - ph[0]) },
+      ],
+    },
+    {
+      key: "rbtts",
+      label: "Result & both teams to score",
+      group: "specials",
+      dense: true,
+      prices: [
+        { outcome: "1/Yes", label: "Home & GG", odds: price(combo.h_y) },
+        { outcome: "1/No", label: "Home & NG", odds: price(combo.h_n) },
+        { outcome: "X/Yes", label: "Draw & GG", odds: price(combo.d_y) },
+        { outcome: "X/No", label: "Draw & NG", odds: price(combo.d_n) },
+        { outcome: "2/Yes", label: "Away & GG", odds: price(combo.a_y) },
+        { outcome: "2/No", label: "Away & NG", odds: price(combo.a_n) },
+      ],
+    },
+  ];
+}

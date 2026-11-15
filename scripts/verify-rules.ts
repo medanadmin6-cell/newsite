@@ -78,7 +78,7 @@ console.log("\nScripted goal timeline");
 console.log("\nDerived markets");
 {
   const markets = deriveMarkets(2.0, 3.4, 3.8);
-  check("every market is priced", markets.length === 6);
+  check("every market is priced", markets.length === 7);
   check("1X2 passes through unchanged",
     markets[0].prices.map((p) => p.odds).join(",") === "2,3.4,3.8");
 

@@ -7,6 +7,8 @@
  */
 import { judge, canJudge, JUDGED_MARKET_COUNT, CORNER_MARKETS } from "../lib/judge";
 import type { MatchResult } from "../lib/results";
+import { deriveMarkets } from "../lib/odds";
+import { correctScoreMarket, goalCountMarkets, teamMarkets } from "../lib/scoreline";
 
 let failures = 0;
 
@@ -131,6 +133,48 @@ check("corners under 9.5 loses on 11", judge("af45", "Under 9.5", m) === false);
 check("corners 1X2 away wins at 4-7", judge("af55", "Away", m) === true);
 check("home corners over 4.5 loses on 4", judge("af57", "Over 4.5", m) === false);
 check("corners stay pending with no stats", judge("af45", "Over 9.5", noHt) === null);
+
+console.log("\nDerived markets (custom matches and unpriced fixtures)");
+check("dc 1X wins on a home win", judge("dc", "1X", m) === true);
+check("dc X2 loses on a home win", judge("dc", "X2", m) === false);
+check("dc X2 wins on a draw", judge("dc", "X2", drawn) === true);
+check("dnb DNB1 wins on a home win", judge("dnb", "DNB1", m) === true);
+check("dnb DNB2 loses on a home win", judge("dnb", "DNB2", m) === false);
+check("dnb stays pending on a draw", judge("dnb", "DNB1", drawn) === null);
+check("ou15 O1.5 wins on 4 goals", judge("ou15", "O1.5", m) === true);
+check("ou15 U1.5 wins on 0-0", judge("ou15", "U1.5", goalless) === true);
+check("ou25 O2.5 wins on 4 goals", judge("ou25", "O2.5", m) === true);
+check("ou25 U2.5 loses on 4 goals", judge("ou25", "U2.5", m) === false);
+check("ou35 O3.5 wins on 4 goals", judge("ou35", "O3.5", m) === true);
+check("ou35 O3.5 loses on 0-0", judge("ou35", "O3.5", goalless) === false);
+check("btts GG wins on 3-1", judge("btts", "GG", m) === true);
+check("btts NG wins on 0-0", judge("btts", "NG", goalless) === true);
+check("home to score Yes wins on 3-1", judge("hts", "Yes", m) === true);
+check("away to score No wins on 0-0", judge("ats", "No", goalless) === true);
+check("home clean sheet No on 3-1", judge("csh", "No", m) === true);
+check("away clean sheet Yes on 0-0", judge("csa", "Yes", goalless) === true);
+check("result & GG 1/Yes wins on 3-1", judge("rbtts", "1/Yes", m) === true);
+check("result & GG X/Yes loses on 3-1", judge("rbtts", "X/Yes", m) === false);
+check("result & GG X/Yes wins on 2-2", judge("rbtts", "X/Yes", drawn) === true);
+
+// Every outcome the site prices on its own must settle without an operator.
+// A market added without a judge fails here instead of leaving tickets open.
+{
+  const derived = [
+    ...deriveMarkets(2.1, 3.3, 3.4),
+    ...teamMarkets(2.1, 3.3, 3.4),
+    ...goalCountMarkets(2.1, 3.3, 3.4),
+    correctScoreMarket(2.1, 3.3, 3.4),
+  ];
+  const unsettled: string[] = [];
+  for (const market of derived) {
+    for (const p of market.prices) {
+      // DNB voids on a draw by design, so judge it on the 3-1.
+      if (judge(market.key, p.outcome, m) === null) unsettled.push(`${market.key}:${p.outcome}`);
+    }
+  }
+  check("every derived outcome settles on a 3-1", unsettled.length === 0, unsettled.join(", "));
+}
 
 console.log("\nRefusals");
 const unfinished = res({ home: 3, away: 1, finished: false });

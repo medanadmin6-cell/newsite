@@ -71,6 +71,10 @@ export function deriveMarkets(h: number, d: number, a: number): Market[] {
   const goalIndex = 1 - p.d * 1.6;
   const over25 = Math.min(0.82, Math.max(0.18, goalIndex));
   const over15 = Math.min(0.93, over25 + 0.22);
+  // The 3.5 line is a step down the same ladder. Fitting it from the scoreline
+  // model instead would put it at odds with the 2.5 line printed beside it,
+  // and the generous side of that disagreement is ours to pay.
+  const over35 = Math.max(0.05, over25 - 0.22);
   const bttsYes = Math.min(0.85, Math.max(0.2, over25 * 0.95));
 
   return [
@@ -119,6 +123,15 @@ export function deriveMarkets(h: number, d: number, a: number): Market[] {
       prices: [
         { outcome: "O1.5", label: "Over 1.5", odds: price(over15) },
         { outcome: "U1.5", label: "Under 1.5", odds: price(1 - over15) },
+      ],
+    },
+    {
+      key: "ou35",
+      group: "goals",
+      label: "Total goals 3.5",
+      prices: [
+        { outcome: "O3.5", label: "Over 3.5", odds: price(over35) },
+        { outcome: "U3.5", label: "Under 3.5", odds: price(1 - over35) },
       ],
     },
     {

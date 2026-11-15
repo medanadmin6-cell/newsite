@@ -16,6 +16,14 @@ interface Overview {
   commissionToday: Record<string, number>;
   commissionCountToday: number;
   partnersPaidToday: number;
+  depositsToday: Record<string, number>;
+  depositsTodayCount: number;
+  stakedToday: Record<string, number>;
+  stakedTodayCount: number;
+  pendingCommission: Record<string, number>;
+  settledCommission: Record<string, number>;
+  customMatches: number;
+  liveMatches: number;
 }
 
 export default function OverviewPage() {
@@ -80,6 +88,44 @@ export default function OverviewPage() {
             </div>
           </div>
         </Panel>
+        <Panel title="Deposits today">
+          <div className="p-4">
+            <CurrencyTotals totals={data.depositsToday} />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              {data.depositsTodayCount.toLocaleString()} deposit{data.depositsTodayCount === 1 ? "" : "s"}
+            </p>
+          </div>
+        </Panel>
+        <Panel title="Staked today">
+          <div className="p-4">
+            <CurrencyTotals totals={data.stakedToday} />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              {data.stakedTodayCount.toLocaleString()} ticket{data.stakedTodayCount === 1 ? "" : "s"}
+            </p>
+          </div>
+        </Panel>
+        <Panel title="Partner commission owed">
+          <div className="p-4">
+            <CurrencyTotals totals={data.pendingCommission} />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">In partner balances, not yet paid out</p>
+          </div>
+        </Panel>
+        <Panel title="Partner commission paid">
+          <div className="p-4">
+            <CurrencyTotals totals={data.settledCommission} />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">Earned and already paid out</p>
+          </div>
+        </Panel>
+        <Link href="/admin/custom-matches" className="block">
+          <Panel title="Custom matches">
+            <div className="p-4">
+              <p className="text-[24px] font-black">{data.customMatches.toLocaleString()}</p>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                {data.liveMatches.toLocaleString()} live now
+              </p>
+            </div>
+          </Panel>
+        </Link>
       </div>
     </div>
   );

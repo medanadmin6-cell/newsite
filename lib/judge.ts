@@ -144,6 +144,30 @@ const JUDGES: Record<string, Judge> = {
     return n === null ? null : total === n;
   },
 
+  // --- Derived markets --------------------------------------------------
+  // The markets built locally from 1X2 for custom matches and for fixtures the
+  // book did not price. They were on the board with no judge behind them, so
+  // every ticket struck on one sat pending until an operator resolved it by
+  // hand. Their outcome vocabulary is our own ("DNB1", "O2.5", "GG"), so each
+  // is matched exactly rather than guessed at.
+  dc: (o, r) => doubleChance(o, resultOf(r.home, r.away)),
+  dnb: (o, r) => {
+    // A draw returns the stake, which won/lost cannot express, so it waits
+    // for the operator rather than being called a loss.
+    if (r.home === r.away) return null;
+    const s = side(o.trim().replace(/^dnb/i, ""));
+    return s === null || s === "draw" ? null : s === resultOf(r.home, r.away);
+  },
+  ou15: (o, r) => derivedOverUnder(o, r.home + r.away),
+  ou25: (o, r) => derivedOverUnder(o, r.home + r.away),
+  ou35: (o, r) => derivedOverUnder(o, r.home + r.away),
+  btts: (o, r) => bothScored(o, r.home > 0 && r.away > 0),
+  hts: (o, r) => yesNo(o, r.home > 0),
+  ats: (o, r) => yesNo(o, r.away > 0),
+  csh: (o, r) => yesNo(o, r.away === 0),
+  csa: (o, r) => yesNo(o, r.home === 0),
+  rbtts: (o, r) => resultAndBtts(o, r),
+
   // --- Team goals -------------------------------------------------------
   af16: (o, r) => overUnder(r.home, o), // Total - Home
   af17: (o, r) => overUnder(r.away, o), // Total - Away
@@ -259,6 +283,27 @@ function doubleChance(o: string, actual: Side): Verdict {
   };
   const set = covers[v];
   return set ? set.includes(actual) : null;
+}
+
+/**
+ * Our own over/under outcomes are written "O2.5" and "U2.5" — no space, no
+ * word — which the upstream parser deliberately will not match.
+ */
+function derivedOverUnder(o: string, total: number): Verdict {
+  const m = o.trim().match(/^([ou])\s*(\d+(?:\.\d+)?)$/i);
+  if (!m) return overUnder(total, o);
+  const l = Number(m[2]);
+  if (!Number.isFinite(l)) return null;
+  if (Number.isInteger(l) && total === l) return null; // push
+  return m[1].toLowerCase() === "o" ? total > l : total < l;
+}
+
+/** Ours are "GG" and "NG"; upstream says "Yes" and "No". */
+function bothScored(o: string, actual: boolean): Verdict {
+  const v = o.trim().toLowerCase();
+  if (v === "gg") return actual;
+  if (v === "ng") return !actual;
+  return yesNo(o, actual);
 }
 
 function resultAndBtts(o: string, r: MatchResult): Verdict {
