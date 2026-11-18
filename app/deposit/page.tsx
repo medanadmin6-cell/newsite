@@ -15,6 +15,7 @@ import {
 import { useSession } from "@/lib/store";
 import { getCountry, formatMoney, localSignificant } from "@/lib/countries";
 import { depositsInCedis, ghsToUsd, highDepositTarget, MIN_WALLET_DEPOSIT, toDisplayAmount, usdToGhs } from "@/lib/fx";
+import { alphapaySessionUrl } from "@/lib/alphapay-url";
 
 /**
  * The deposit screen.
@@ -95,6 +96,16 @@ export default function DepositPage() {
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? "Could not start your deposit");
+        return;
+      }
+
+      if (json.provider === "alphapay") {
+        const sessionUrl = alphapaySessionUrl(json.redirectUrl);
+        if (!sessionUrl) {
+          setError("Could not open the payment page");
+          return;
+        }
+        window.location.href = sessionUrl;
         return;
       }
 
