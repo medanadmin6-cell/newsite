@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // ProxyAgent uses Node's network stack. Keep it out of the server bundle.
+  serverExternalPackages: ["undici"],
 };
 
 export default nextConfig;
