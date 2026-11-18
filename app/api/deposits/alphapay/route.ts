@@ -79,7 +79,12 @@ export async function POST(req: Request) {
  * minutes is rejected, the same window their docs and Betzone use.
  */
 function signed(raw: string, header: string | null, timestamp: string | null): boolean {
-  const key = process.env.ALPHAPAY_WEBHOOK_SECRET || process.env.ALPHAPAY_SECRET_KEY;
+  // Trimmed for the same reason as the API key: a pasted secret often carries
+  // a newline or quotes, and then no signature would ever match.
+  const key = (process.env.ALPHAPAY_WEBHOOK_SECRET || process.env.ALPHAPAY_SECRET_KEY || "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
   if (!key || !header || !timestamp) return false;
   const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
   if (!Number.isFinite(age) || age > 300) return false;

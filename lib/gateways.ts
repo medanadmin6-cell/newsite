@@ -862,13 +862,40 @@ const akwapay: GatewayAdapter = {
  * network on AlphaPay's page. Nothing is credited until that session is PAID.
  * sk_test_ keys use the sandbox host; sk_live_ keys use the live host.
  */
+const ALPHAPAY_LIVE = "https://api.alphapay.me/api/v1";
+const ALPHAPAY_SANDBOX = "https://sandbox-api.alphapay.me/api/v1";
+
+/**
+ * The secret key exactly as AlphaPay issued it. A value pasted into the host
+ * dashboard often carries a trailing newline, spaces or the quotes from a
+ * .env line, and AlphaPay answers any of those with "Clé API invalide".
+ */
+function alphapayKey(): string | null {
+  const raw = env("ALPHAPAY_SECRET_KEY");
+  if (!raw) return null;
+  const key = raw.trim().replace(/^["']|["']$/g, "").trim();
+  return key || null;
+}
+
+/**
+ * A test key only works on the sandbox host and a live key only on the live
+ * one; the wrong pairing is rejected as an invalid key. ALPHAPAY_API_BASE is
+ * honoured only when it agrees with the key, so a live base copied from
+ * .env.example cannot break a test key (or the reverse).
+ */
 function alphapayApiBase(): string {
-  const forced = env("ALPHAPAY_API_BASE");
-  if (forced) return forced.replace(/\/+$/, "");
-  const key = env("ALPHAPAY_SECRET_KEY") ?? "";
-  return key.startsWith("sk_test_")
-    ? "https://sandbox-api.alphapay.me/api/v1"
-    : "https://api.alphapay.me/api/v1";
+  const key = alphapayKey() ?? "";
+  const keyHost = key.startsWith("sk_test_") ? ALPHAPAY_SANDBOX : ALPHAPAY_LIVE;
+  const forced = env("ALPHAPAY_API_BASE")?.trim().replace(/\/+$/, "");
+  if (!forced) return keyHost;
+  const forcedIsSandbox = /sandbox/i.test(forced);
+  const keyIsTest = key.startsWith("sk_test_");
+  const keyIsLive = key.startsWith("sk_live_");
+  if ((keyIsTest && !forcedIsSandbox) || (keyIsLive && forcedIsSandbox)) {
+    console.warn("[alphapay] ALPHAPAY_API_BASE does not match the key type; using", keyHost);
+    return keyHost;
+  }
+  return forced;
 }
 
 /** AlphaPay takes a Ghana number the way it is dialled locally: 0241234567. */
@@ -930,7 +957,7 @@ async function alphapayRequest(
   path: string,
   init?: RequestInit,
 ): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> {
-  const key = env("ALPHAPAY_SECRET_KEY");
+  const key = alphapayKey();
   if (!key) return { ok: false, error: "Mobile money is not available right now" };
   // Payout routes are the only AlphaPay calls that must leave via the static
   // proxy. Checkout, status, and the webhook stay on a direct connection.
@@ -1023,6 +1050,11 @@ async function alphapayCallResult(
   if (!res.ok || json?.success === false) {
     const message = alphapayErrorMessage(json, res.status);
     console.error("[alphapay]", path, res.status, message);
+    // A rejected key or an unauthorised caller is ours to fix, not the
+    // player's. They get a plain message; the real one is in the logs.
+    if (res.status === 401 || res.status === 403 || /cl[ée]\s*api|api\s*key|invalid\s*key/i.test(message)) {
+      return { ok: false, error: "Deposits are being set up. Please try again shortly." };
+    }
     return { ok: false, error: message };
   }
   return { ok: true, data };
