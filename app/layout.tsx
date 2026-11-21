@@ -1,14 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Roboto } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { WithdrawalIosBoot } from "@/components/withdrawal-ios-boot";
 
 // The reference build ships Roboto at these four weights; matching them keeps
-// the type colour of the board identical.
-const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
+// the type colour of the board identical. The files live in the repo: loading
+// them from Google at build time failed the production build whenever that
+// download did.
+const roboto = localFont({
+  src: [
+    { path: "./fonts/roboto-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/roboto-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/roboto-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/roboto-latin-900-normal.woff2", weight: "900", style: "normal" },
+  ],
   variable: "--font-roboto",
   display: "swap",
 });
