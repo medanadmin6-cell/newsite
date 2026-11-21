@@ -10,7 +10,6 @@ import {
   signedOdds,
   type DrawnMatch,
 } from "@/lib/virtuals";
-import { roundMoney, stakeCurrencyFor, stakeToWallet } from "@/lib/fx";
 
 export const dynamic = "force-dynamic";
 
@@ -105,19 +104,16 @@ export async function POST(req: Request) {
 
   const { data: user } = await supabase
     .from("users")
-    .select("id, balance, currency, country_code")
+    .select("id, balance, currency")
     .eq("id", body.userId)
     .maybeSingle();
   if (!user) return NextResponse.json({ error: "Sign in to play" }, { status: 401 });
 
-  // Stakes stay in cedis. The dollar wallet is only charged the converted amount.
-  const ticketCurrency = stakeCurrencyFor(user.country_code, user.currency);
-  const totalDebit = roundMoney(priced.reduce((sum, pick) => sum + pick.stake, 0));
-  const walletDebit = stakeToWallet(ticketCurrency, user.currency, totalDebit);
+  const totalDebit = Math.round(priced.reduce((sum, pick) => sum + pick.stake, 0) * 100) / 100;
   const held = Number(user.balance);
-  if (held < walletDebit) return NextResponse.json({ error: "Not enough balance" }, { status: 402 });
+  if (held < totalDebit) return NextResponse.json({ error: "Not enough balance" }, { status: 402 });
 
-  const afterStake = roundMoney(held - walletDebit);
+  const afterStake = Math.round((held - totalDebit) * 100) / 100;
   const { data: debited } = await supabase
     .from("users")
     .update({ balance: afterStake })
@@ -144,9 +140,8 @@ export async function POST(req: Request) {
     const payout = won ? Math.round(pick.stake * pick.odds * 100) / 100 : 0;
     return { ...pick, won, payout, score };
   });
-  const totalPayout = roundMoney(settled.reduce((sum, pick) => sum + pick.payout, 0));
-  const walletPayout = stakeToWallet(ticketCurrency, user.currency, totalPayout);
-  const finalBalance = roundMoney(afterStake + walletPayout);
+  const totalPayout = Math.round(settled.reduce((sum, pick) => sum + pick.payout, 0) * 100) / 100;
+  const finalBalance = Math.round((afterStake + totalPayout) * 100) / 100;
 
   if (totalPayout > 0) {
     const { error } = await supabase.from("users").update({ balance: finalBalance }).eq("id", user.id);
@@ -163,7 +158,7 @@ export async function POST(req: Request) {
     stake: pick.stake,
     total_odds: pick.odds,
     potential_win: Math.round(pick.stake * pick.odds * 100) / 100,
-    currency: ticketCurrency,
+    currency: user.currency,
     status: pick.won ? "won" : "lost",
     payout: pick.payout,
     mode: "single",
@@ -236,7 +231,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     balance: finalBalance,
-    currency: ticketCurrency,
+    currency: user.currency,
     stake: totalDebit,
     totalDebit,
     payout: totalPayout,
