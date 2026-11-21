@@ -8,6 +8,7 @@ import { GoalTimeline, type Goal } from "@/components/admin/GoalTimeline";
 import { CrestPicker } from "@/components/admin/CrestPicker";
 import { matchClock, scoreFromTimeline } from "@/lib/clock";
 import { formatSiteTime, siteInputToIso, SITE_TIMEZONE_LABEL } from "@/lib/site-time";
+import { correctedNow, useNow } from "@/lib/now";
 
 /**
  * The state players actually see. The board and settlement both run off the
@@ -16,6 +17,9 @@ import { formatSiteTime, siteInputToIso, SITE_TIMEZONE_LABEL } from "@/lib/site-
  * them back.
  */
 function StateBadge({ m }: { m: CustomMatch }) {
+  // The corrected clock, not this device's own: a phone set hours off showed
+  // a match as live long before its kickoff.
+  const now = useNow();
   if (m.finished) {
     return (
       <Badge tone="muted">
@@ -23,7 +27,7 @@ function StateBadge({ m }: { m: CustomMatch }) {
       </Badge>
     );
   }
-  const clock = matchClock(m.kickoff, m.sport ?? "football");
+  const clock = matchClock(m.kickoff, m.sport ?? "football", new Date(now || correctedNow()));
   if (clock.isOver) {
     const s = scoreFromTimeline(m.goal_timeline ?? [], clock);
     return (

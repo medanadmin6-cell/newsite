@@ -8,6 +8,7 @@ import { useSession } from "@/lib/store";
 import { formatMoney } from "@/lib/countries";
 import { toDisplayAmount } from "@/lib/fx";
 import { matchClock } from "@/lib/clock";
+import { correctedNow, useNow } from "@/lib/now";
 import { WinCelebration, hasCelebrated, markCelebrated } from "@/components/WinCelebration";
 
 interface Leg {
@@ -230,7 +231,8 @@ function liveLeg(ticket: Ticket): { label: string; done: boolean } | null {
   for (const leg of ticket.selections) {
     if (!leg.kickoff || leg.result === "won" || leg.result === "lost") continue;
     saw = true;
-    const clock = matchClock(leg.kickoff);
+    // Corrected to the server: a phone hours fast showed FULL TIME before kickoff.
+    const clock = matchClock(leg.kickoff, "football", new Date(correctedNow()));
     if (clock.isLive) return { label: clock.label, done: false };
     if (!clock.isOver) done = false;
   }
@@ -255,6 +257,9 @@ function TicketCard({
   );
   const [open, setOpen] = useState(false);
   const style = STATUS_STYLE[ticket.status] ?? STATUS_STYLE.pending;
+  // Subscribing re-renders the card as the corrected clock ticks and once the
+  // server offset is known, so LIVE/FT follow real time, not this phone's.
+  useNow();
   const live = liveLeg(ticket);
 
   return (
