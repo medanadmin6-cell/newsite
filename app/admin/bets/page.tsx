@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { useAdminData, Panel, Table, Badge, money } from "@/components/admin/ui";
+import { formatSiteTime } from "@/lib/site-time";
 
 interface Leg {
   home_team: string;
@@ -84,7 +85,7 @@ export default function BetsPage() {
                     <Badge tone={TONE[t.status] ?? "muted"}>{t.status}</Badge>
                   </td>
                   <td className="px-3 py-2 text-[11px] text-[var(--text-faint)]">
-                    {new Date(t.created_at).toLocaleString()}
+                    {formatSiteTime(t.created_at)}
                   </td>
                 </tr>
 

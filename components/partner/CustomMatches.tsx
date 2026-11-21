@@ -5,6 +5,7 @@ import Image from "next/image";
 import { CrestPicker } from "@/components/admin/CrestPicker";
 import { GoalTimeline, type Goal } from "@/components/admin/GoalTimeline";
 import { useDialog, validators } from "@/components/admin/Dialog";
+import { formatSiteTime, siteInputToIso, SITE_TIMEZONE_LABEL } from "@/lib/site-time";
 
 interface CustomMatch {
   id: string;
@@ -85,7 +86,8 @@ export function CustomMatches({ approved }: { approved: boolean }) {
         odds_home: Number(form.odds_home),
         odds_draw: Number(form.odds_draw),
         odds_away: Number(form.odds_away),
-        kickoff: new Date(form.kickoff).toISOString(),
+        // Read as Ghana time, whatever timezone this device is set to.
+        kickoff: siteInputToIso(form.kickoff),
       }),
     });
     const json = await res.json().catch(() => null);
@@ -194,13 +196,17 @@ export function CustomMatches({ approved }: { approved: boolean }) {
               onChange={(e) => setForm({ ...form, league: e.target.value })}
               className={field}
             />
-            <input
-              required
-              type="datetime-local"
-              value={form.kickoff}
-              onChange={(e) => setForm({ ...form, kickoff: e.target.value })}
-              className={field}
-            />
+            <label className="flex flex-col gap-0.5">
+              <input
+                required
+                type="datetime-local"
+                value={form.kickoff}
+                onChange={(e) => setForm({ ...form, kickoff: e.target.value })}
+                aria-label={`Kickoff (${SITE_TIMEZONE_LABEL})`}
+                className={field}
+              />
+              <span className="text-[10px] text-[var(--text-faint)]">Kickoff in {SITE_TIMEZONE_LABEL} (GMT)</span>
+            </label>
             <input
               placeholder="Home odds"
               inputMode="decimal"
@@ -278,7 +284,7 @@ export function CustomMatches({ approved }: { approved: boolean }) {
                         {m.home_team} v {m.away_team}
                       </p>
                       <p className="text-[11px] text-[var(--text-faint)]">
-                        {m.league} · {new Date(m.kickoff).toLocaleString()}
+                        {m.league} · {formatSiteTime(m.kickoff)}
                       </p>
                     </div>
                     <p className="font-mono text-[11px]">

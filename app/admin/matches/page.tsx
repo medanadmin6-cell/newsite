@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAdminData, adminAction, Panel, Table, Badge, Button } from "@/components/admin/ui";
 import { useDialog, validators } from "@/components/admin/Dialog";
 import type { FeedMatch } from "@/lib/fixtures";
+import { formatSiteTime } from "@/lib/site-time";
 
 interface Override {
   match_id: string;
@@ -137,7 +138,7 @@ export default function MatchesPage() {
                       {m.homeTeam} v {m.awayTeam}
                     </p>
                     <p className="text-[11px] text-[var(--text-faint)]">
-                      {new Date(m.kickoff).toLocaleString()}
+                      {formatSiteTime(m.kickoff)}
                     </p>
                   </td>
                   <td className="px-3 py-2 text-[11px] text-[var(--text-muted)]">{m.league}</td>

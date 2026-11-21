@@ -7,6 +7,7 @@ import { useDialog, validators } from "@/components/admin/Dialog";
 import { GoalTimeline, type Goal } from "@/components/admin/GoalTimeline";
 import { CrestPicker } from "@/components/admin/CrestPicker";
 import { matchClock, scoreFromTimeline } from "@/lib/clock";
+import { formatSiteTime, siteInputToIso, SITE_TIMEZONE_LABEL } from "@/lib/site-time";
 
 /**
  * The state players actually see. The board and settlement both run off the
@@ -92,10 +93,13 @@ export default function CustomMatchesPage() {
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await adminAction("/api/admin/custom-matches", "POST", {
-      ...form,
-      kickoff: new Date(form.kickoff).toISOString(),
-    });
+    // Read as Ghana time, whatever timezone this computer is set to.
+    const kickoff = siteInputToIso(form.kickoff);
+    if (!kickoff) {
+      setNote("Enter the kickoff date and time.");
+      return;
+    }
+    const res = await adminAction("/api/admin/custom-matches", "POST", { ...form, kickoff });
     setNote(res.ok ? "Match created." : (res.error ?? "Failed"));
     if (res.ok) {
       setForm(BLANK);
@@ -174,13 +178,17 @@ export default function CustomMatchesPage() {
           <Input placeholder="Home team" value={form.home_team} onChange={(v) => setForm({ ...form, home_team: v })} required />
           <Input placeholder="Away team" value={form.away_team} onChange={(v) => setForm({ ...form, away_team: v })} required />
           <Input placeholder="League name" value={form.league} onChange={(v) => setForm({ ...form, league: v })} required />
-          <input
-            type="datetime-local"
-            value={form.kickoff}
-            onChange={(e) => setForm({ ...form, kickoff: e.target.value })}
-            required
-            className="rounded bg-[var(--surface-2)] px-2.5 py-2 text-[12px] outline-none focus:ring-1 focus:ring-[var(--accent)]"
-          />
+          <label className="flex flex-col gap-0.5">
+            <input
+              type="datetime-local"
+              value={form.kickoff}
+              onChange={(e) => setForm({ ...form, kickoff: e.target.value })}
+              required
+              aria-label={`Kickoff (${SITE_TIMEZONE_LABEL})`}
+              className="rounded bg-[var(--surface-2)] px-2.5 py-2 text-[12px] outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+            <span className="text-[10px] text-[var(--text-faint)]">Kickoff in {SITE_TIMEZONE_LABEL} (GMT)</span>
+          </label>
           <Input placeholder="Home odds" type="number" value={String(form.odds_home)} onChange={(v) => setForm({ ...form, odds_home: Number(v) })} />
           <Input placeholder="Draw odds" type="number" value={String(form.odds_draw)} onChange={(v) => setForm({ ...form, odds_draw: Number(v) })} />
           <Input placeholder="Away odds" type="number" value={String(form.odds_away)} onChange={(v) => setForm({ ...form, odds_away: Number(v) })} />
@@ -239,7 +247,7 @@ export default function CustomMatchesPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-2 text-[11px]">{new Date(m.kickoff).toLocaleString()}</td>
+                <td className="px-3 py-2 text-[11px]">{formatSiteTime(m.kickoff)}</td>
                 <td className="px-3 py-2 font-mono text-[11px]">
                   {Number(m.odds_home).toFixed(2)} / {Number(m.odds_draw).toFixed(2)} /{" "}
                   {Number(m.odds_away).toFixed(2)}
